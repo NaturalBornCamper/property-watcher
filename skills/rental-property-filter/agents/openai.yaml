@@ -1,0 +1,6 @@
+name: rental-property-filter
+interface:
+  display_name: Rental Property Filter
+  short_description: Filter rental listings into the Property Watcher table.
+  icon: 🏠
+  primary_color: "#2E7D8A"
