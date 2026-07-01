@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Property Watcher - Rental Listings</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      max-width: 1500px;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .meta,
+    .filters {
+      margin: 0 0 12px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1200px;
+    }
+
+    th,
+    td {
+      border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: Canvas;
+    }
+
+    .empty {
+      text-align: center;
+      font-style: italic;
+    }
+
+    .notes {
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Property Watcher - Rental Listings</h1>
+    <p class="meta"><strong>Last updated:</strong> 2026-07-01</p>
+    <p class="filters"><strong>Current filters:</strong> postal code starts with H4H or H8P; at least 2 rooms/bedrooms; at least 900 sqft when a real size is available.</p>
+  </header>
+
+  <main>
+    <section aria-labelledby="accepted-listings-heading">
+      <h2 id="accepted-listings-heading">Accepted listings</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date added</th>
+              <th>Date listed</th>
+              <th>Price</th>
+              <th>Rooms</th>
+              <th>Size</th>
+              <th>Location / postal code</th>
+              <th>Floor</th>
+              <th>Laundry</th>
+              <th>Courtyard</th>
+              <th>URL</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="accepted-listings">
+            <tr data-empty="true">
+              <td class="empty" colspan="11">No accepted listings yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="notes" aria-labelledby="run-notes-heading">
+      <h2 id="run-notes-heading">Run notes</h2>
+      <p>No blocked or unresolved sources recorded yet.</p>
+    </section>
+  </main>
+</body>
+</html>
