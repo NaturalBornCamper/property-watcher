@@ -1,25 +1,36 @@
 # Property Watcher
 
-Markdown source files and ChatGPT Skill instructions for filtering property rental and purchase listings into a short list of actually interesting options.
+ChatGPT agent instructions and Skills for filtering property rental and purchase listings into a small, useful watch list.
 
-The repository currently focuses on **rental** listings, but the project is intentionally organized so future skills can support purchase searches for a forever home.
+The repository currently focuses on **rental** listings, but it is intentionally organized so future skills can support purchase searches for a forever home.
 
 ## Main files
 
-- `rental-listings.md` - accepted rental listings table, newest listing date first.
-- `rental-listings-changelog.md` - newest-first changelog for daily rental-listing updates.
-- `AGENTS.md` - source of truth for project rules, eligibility criteria, scraping etiquette, table schema, and update workflow.
+- `docs/index.html` - compiled rental-listings output. This is the file to refresh after each filtering run.
+- `AGENTS.md` - source of truth for project rules, eligibility criteria, request etiquette, output schema, and update workflow.
 - `CLAUDE.md` - Claude entry point that imports `AGENTS.md`.
 - `skills/rental-property-filter/` - ChatGPT Skill instructions for filtering rental property URLs or public newsletter/search-alert HTML.
 
+## Where the compiled output goes
+
+Use `docs/index.html` as the canonical compiled output file.
+
+This gives two practical publishing options:
+
+1. **GitHub Pages:** enable Pages for this repository using the `main` branch and `/docs` folder. Then `docs/index.html` becomes a refreshable web page.
+2. **Shared hosting deploy:** add a GitHub Actions workflow later that uploads `docs/index.html` to Interserver/cPanel by FTP using GitHub repository secrets. Do not put FTP, SFTP, SSH, or cPanel credentials directly in this repo.
+
+For now, agents should update `docs/index.html` directly when a compiled rental table is approved.
+
 ## How updates work
 
-Daily rental updates should keep `rental-listings.md` unchanged except for:
+Daily rental updates should keep `docs/index.html` unchanged except for:
 
 1. adding newly accepted rental rows;
-2. updating the visible `LAST UPDATED` date;
-3. keeping the table sorted by newest `DATE LISTED` on top;
-4. adding a newest-first changelog block to `rental-listings-changelog.md`.
+2. updating existing rows when newly fetched details clarify unknown fields;
+3. updating the visible `Last updated` date;
+4. keeping the table sorted by newest `Date listed` on top;
+5. preserving blocked/unresolved source notes when useful.
 
 The current rental filters are:
 
@@ -30,6 +41,6 @@ The current rental filters are:
 
 ## Using the skill
 
-Use `skills/rental-property-filter/SKILL.md` when analyzing listing-result URLs, listing pages, or public HTML URLs generated from rental search-alert newsletters. The skill workflow extracts listing data, follows detail pages only when needed, applies the current rental filters, and prepares reviewable Markdown updates before any GitHub commit.
+Use `skills/rental-property-filter/SKILL.md` when analyzing listing-result URLs, listing pages, or public HTML URLs generated from rental search-alert newsletters. The skill workflow extracts listing data, follows detail pages only when needed, applies the current rental filters, and prepares reviewable `docs/index.html` updates before any GitHub commit.
 
 For detailed rules, read `AGENTS.md`.
