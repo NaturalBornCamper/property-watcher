@@ -1,6 +1,6 @@
 ---
 name: rental-property-filter
-description: Filter rental property listings for the Property Watcher project. Use when the user provides rental listing-result URLs, individual listing URLs, raw listing HTML, or public newsletter/search-alert HTML URLs and wants ChatGPT to extract property details from structured fields or descriptions, use safe per-domain request limits, reject listings outside H4H or H8P, reject listings with fewer than 2 rooms, reject listings under 900 square feet when real size is available, report blocked sources, and prepare reviewable docs/index.html compiled-table updates.
+description: Filter rental property listings for the Property Watcher project. Use when the user provides rental listing-result URLs, individual listing URLs, raw listing HTML, or public newsletter/search-alert HTML URLs and wants ChatGPT to extract property details from structured fields or descriptions, use safe per-domain request limits, reject listings outside H4H or H8P, reject listings with fewer than 2 rooms, reject listings under 900 square feet when real size is available, report blocked sources, and update and commit docs/index.html compiled-table changes directly unless the user explicitly asks for review-only or no-commit behavior.
 ---
 
 # Rental Property Filter
@@ -25,14 +25,14 @@ Normalize each input into one or more candidate listing URLs or listing cards be
 
 For each run, provide:
 
-1. Accepted rental listings ready for `docs/index.html`.
+1. Accepted rental listings added to or updated in `docs/index.html`.
 2. Rejected listings with concise reasons when inspected.
 3. Unresolved candidates that look promising but are missing required proof, especially postal code or room count.
 4. Blocked sources that could not be inspected because of CAPTCHA, bot detection, 403, 429, or access restrictions.
-5. Proposed compiled-table rows sorted newest first.
-6. Proposed commit message.
+5. Compiled-table rows sorted newest first.
+6. Files changed and commit SHA when committed.
 
-Do not commit until the user explicitly approves, unless the user already gave clear commit authorization.
+Commit directly for normal filtering/update runs after best-effort validation. Do not ask for a separate commit confirmation unless the user explicitly says to review first, draft only, do not commit, or otherwise asks for approval before writing.
 
 ## Request etiquette
 
@@ -63,10 +63,12 @@ For each candidate listing:
    - Postal codes uppercase, preserving full code when available.
    - Prices as CAD monthly rental prices when source allows.
    - Size as sqft, or `Unknown` when missing.
-   - Impossible sizes such as `1 sqft` or `0 sqft` as `Unknown`.
+   - Impossible sizes such as `1 sqft`, `0 sqft`, blank, or impossible tiny sizes as `Unknown`.
    - Dates as `YYYY-MM-DD` when possible, with `Unknown` when not recoverable.
 6. Apply the rental eligibility rules.
-7. Prepare accepted rows, then rejected, unresolved, and blocked-source summaries.
+7. Update `docs/index.html` with accepted rows and useful run notes.
+8. Commit the changed file directly unless the user explicitly requested review-only or no-commit behavior.
+9. Report accepted rows, rejected rows, unresolved rows, blocked sources, changed files, and commit SHA.
 
 ## Rental eligibility rules
 
@@ -124,7 +126,7 @@ Use `Unknown` for unavailable values.
 
 Escape HTML special characters in text cells.
 
-Sort accepted rows by `Date listed` newest first before proposing updates. For equal dates, sort by `Date added` newest first. Put `Unknown` listing dates below dated listings.
+Sort accepted rows by `Date listed` newest first before committing updates. For equal dates, sort by `Date added` newest first. Put `Unknown` listing dates below dated listings.
 
 ## Rejection, unresolved, and blocked summary format
 
@@ -150,7 +152,7 @@ Do not spend excessive effort on clearly rejected listings once the rejection re
 
 ## Preparing HTML changes
 
-Before proposing edits:
+Before committing edits:
 
 1. Check `docs/index.html` for duplicate URLs, duplicate listing IDs, and matching address/price rows.
 2. Add only accepted rows.
@@ -163,11 +165,14 @@ Before proposing edits:
 
 ## GitHub commit behavior
 
-If the user approves committing:
+For normal rental filtering/update requests:
 
 1. Update `docs/index.html`.
-2. Preserve unrelated content exactly.
-3. Use a clear commit message.
+2. Preserve unrelated content as much as practical.
+3. Commit directly with a clear commit message.
+4. Report the commit SHA.
+
+If the user explicitly asks for review-only, draft-only, no commit, or approval before writing, do not commit.
 
 If the available GitHub tool can only write one file per commit, say so and make sequential commits. Do not claim a single commit was made if multiple commits were required.
 
@@ -183,4 +188,4 @@ If the available GitHub tool can only write one file per commit, say so and make
 - Do not run multiple simultaneous requests to the same domain.
 - Do not fetch every detail page when listing cards already prove rejection.
 - Do not rewrite unrelated HTML during a normal daily update.
-- Do not commit before approval when approval is required.
+- Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.
