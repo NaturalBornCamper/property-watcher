@@ -92,8 +92,57 @@
             </tr>
           </thead>
           <tbody id="accepted-listings">
-            <tr data-empty="true">
-              <td class="empty" colspan="11">No accepted listings yet.</td>
+            <tr>
+              <td>2026-07-01</td>
+              <td>2026-06-30</td>
+              <td>$1,600/mo</td>
+              <td>2 bedrooms</td>
+              <td>1,000 sqft</td>
+              <td>655 Avenue Lacharité #1, Montréal, QC H8P 2C1</td>
+              <td>1st floor</td>
+              <td>In-unit washer/dryer</td>
+              <td>Back yard; balcony</td>
+              <td><a href="https://www.zumper.com/address/655-ave-lacharite-montreal-qc-h8p-2c1-can">Listing</a></td>
+              <td>Detail page verified 2 bedrooms, 1,000 sqft, H8P, first floor, washer/dryer, back yard.</td>
+            </tr>
+            <tr>
+              <td>2026-07-01</td>
+              <td>Unknown</td>
+              <td>$1,600/mo</td>
+              <td>2 bedrooms</td>
+              <td>980 sqft</td>
+              <td>7779 Boulevard LaSalle #416B, Montréal, QC H8P 3S9</td>
+              <td>Unknown</td>
+              <td>On-site laundry</td>
+              <td>Garden/outdoor space; balcony</td>
+              <td><a href="https://www.zumper.com/address/7779-blvd-lasalle-montreal-qc-h8p-3s9-can">Listing</a></td>
+              <td>Detail page verified 2 bedrooms, 980 sqft, H8P, outdoor space.</td>
+            </tr>
+            <tr>
+              <td>2026-07-01</td>
+              <td>Unknown</td>
+              <td>$1,700/mo</td>
+              <td>2 beds</td>
+              <td>Unknown</td>
+              <td>714 Rue Riverview Unit 714, Verdun, QC H4H 2C1</td>
+              <td>Unknown</td>
+              <td>Unknown</td>
+              <td>Unknown</td>
+              <td><a href="https://www.apartments.com/714-rue-riverview-verdun-qc/wcnjz6k/">Listing</a></td>
+              <td>Apartments.com result card verified H4H and 2 beds; detail page could not be fetched, size remains unknown.</td>
+            </tr>
+            <tr>
+              <td>2026-07-01</td>
+              <td>Unknown</td>
+              <td>$1,800/mo</td>
+              <td>3 beds</td>
+              <td>Unknown</td>
+              <td>534 38e Avenue, Montréal, QC H8P 3A7</td>
+              <td>2nd floor</td>
+              <td>Unknown</td>
+              <td>2 balconies</td>
+              <td><a href="https://www.zumper.com/apartments-for-rent/montreal-qc/lasalle">Listing</a></td>
+              <td>Zumper result card verified H8P and 3 beds; detail URL was not accessible from the tool, size remains unknown.</td>
             </tr>
           </tbody>
         </table>
@@ -102,7 +151,13 @@
 
     <section class="notes" aria-labelledby="run-notes-heading">
       <h2 id="run-notes-heading">Run notes</h2>
-      <p>No blocked or unresolved sources recorded yet.</p>
+      <p><strong>2026-07-01:</strong> Added 4 accepted listings from search-result processing. Exact filtered URLs often returned tool cache-miss or safe-open errors, so accessible public result pages and detail pages were used where available.</p>
+      <ul>
+        <li>Rejected after detail verification: 6161 Boulevard LaSalle because the available 2-bedroom floor plan was listed under 900 sqft.</li>
+        <li>Kept out of accepted table: 689 Rue Woodland because the 2-bedroom floor plan was listed as 800-900 sqft and the exact unit size could not be confirmed as at least 900 sqft.</li>
+        <li>Unresolved: 815 Rue Gagné / Complexe Celeste because the card showed 1-3 bedroom availability and a broad price range, but no exact eligible 2+ bedroom unit details.</li>
+        <li>Blocked or unreliable exact filtered pages: Centris, Kijiji, RentCafe filtered URLs, Apartments.com filtered URLs, Zumper filtered URLs, and PadMapper filtered URLs returned cache-miss or safe-open errors in the tool environment. No access-control bypass was attempted.</li>
+      </ul>
     </section>
   </main>
 </body>
