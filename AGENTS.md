@@ -178,6 +178,14 @@ Do not rewrite unrelated rows, change the schema, or perform opportunistic clean
 
 Before final output or commit, verify that every accepted row satisfies postal-code, room, and size rules.
 
+## Commit behavior
+
+For normal rental filtering/update requests, update `docs/index.html` and commit directly after best-effort validation. Do not ask for a separate commit confirmation unless the user explicitly says to review first, draft only, do not commit, or otherwise asks for approval before writing.
+
+When instructions or workflow defaults change, update `AGENTS.md` and the active skill file directly and commit those changes as part of the same task when possible.
+
+If the available GitHub tool writes one file per commit, make sequential commits and report each commit SHA.
+
 ## Review workflow
 
 For filtering tasks, provide:
@@ -187,7 +195,7 @@ For filtering tasks, provide:
 - Unresolved candidates that need manual review, especially missing postal code or ambiguous room count.
 - Blocked sources that could not be checked because of bot protection, CAPTCHA, HTTP errors, or access restrictions.
 - Files changed.
-- Proposed commit message.
+- Commit message and commit SHA when committed; otherwise a proposed commit message.
 
 Do not claim a file has been committed unless a GitHub write action has actually succeeded.
 
@@ -217,4 +225,4 @@ Prefer one logical change per commit unless the user asks otherwise.
 - Do not ignore the free-text description when structured fields are missing.
 - Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, listing dates, or added dates.
 - Do not silently change table schemas.
-- Do not commit to GitHub before review when the user explicitly asks to review first.
+- Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.
