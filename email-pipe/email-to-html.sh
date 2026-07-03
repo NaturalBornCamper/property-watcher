@@ -28,8 +28,8 @@ if [ -f "$SCRIPT_DIR/settings.env" ]; then
     set +a
 fi
 
-LOG_FILE="${LOG_FILE:-$SCRIPT_DIR/pipe.log}"
-FAILED_DIR="${FAILED_DIR:-$SCRIPT_DIR/failed}"
+LOG_FILE="$SCRIPT_DIR/pipe.log"
+FAILED_DIR="$SCRIPT_DIR/failed"
 
 # Simple rotation so the log cannot grow unbounded on shared hosting.
 if [ -f "$LOG_FILE" ]; then
@@ -368,12 +368,13 @@ fi
 size=$(wc -c < "$DEST")
 log "wrote $DEST (${size:-?} bytes, cte=${cte:-7bit}, from $from_domain)"
 
-if [ -n "$ARCHIVE_DIR" ]; then
-    if mkdir -p "$ARCHIVE_DIR"; then
-        cp -p "$DEST" "$ARCHIVE_DIR/$name-$(date '+%Y%m%d-%H%M%S').html"
-    else
-        log "WARNING: cannot create ARCHIVE_DIR: $ARCHIVE_DIR"
-    fi
+# Keep a timestamped copy of every version next to the published files, so
+# an alert overwritten by a newer one is never lost.
+ARCHIVE_DIR="$OUTPUT_DIR/archive"
+if mkdir -p "$ARCHIVE_DIR"; then
+    cp -p "$DEST" "$ARCHIVE_DIR/$name-$(date '+%Y%m%d-%H%M%S').html"
+else
+    log "WARNING: cannot create archive folder: $ARCHIVE_DIR"
 fi
 
 exit 0

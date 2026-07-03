@@ -23,7 +23,8 @@ decoding are done with embedded `awk` programs and coreutils (`base64`,
 `tr`, `sed`), all present on any cPanel server. No Python or Perl needed.
 
 Created at runtime next to the script: `pipe.log` (log, rotated at ~1 MB) and
-`failed/` (raw copies of emails that could not be processed).
+`failed/` (raw copies of emails that could not be processed). Created inside
+`OUTPUT_DIR`: `archive/` (timestamped history of every published version).
 
 ## Server setup
 
@@ -70,8 +71,12 @@ real email through the filter and check `pipe.log` again.
 - **Filename** — sender domain minus the public suffix: `@centris.ca` and
   `@e.centris.ca` both become `centris.html`; common two-part suffixes such
   as `qc.ca` or `co.uk` are handled. The name is sanitized to `a-z0-9-`.
-- **Overwrites** — one file per sender domain, always the latest email. Set
-  `ARCHIVE_DIR` in `settings.env` to also keep timestamped copies.
+- **Overwrites** — one file per sender domain, always the latest email. A
+  timestamped copy of every version is also kept in `archive/` next to the
+  published files (e.g. `archive/centris-20260703-153000.html`), so an alert
+  replaced by a newer one is never lost. Note that `archive/` lives under
+  the subdomain too, so old versions stay reachable by URL; delete old
+  archive files whenever you want to reclaim space.
 - **Allowlist** — anyone who emails the pipe address publishes HTML on your
   subdomain, so keep `ALLOWED_SENDER_DOMAINS` set; list as many domains as
   you need, separated by spaces. (Sender addresses can be spoofed; the
