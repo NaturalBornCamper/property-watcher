@@ -1,0 +1,2 @@
+# Server-specific settings; only settings.env.example belongs in the repo.
+email-pipe/settings.env

@@ -16,6 +16,7 @@ Primary files:
 - `AGENTS.md` - project instructions and source of truth for agents.
 - `CLAUDE.md` - Claude-specific entry point that should reference this file instead of duplicating these rules.
 - `skills/rental-property-filter/SKILL.md` - current ChatGPT Skill for rental property filtering.
+- `email-pipe/` - cPanel email-pipe scripts that publish search-alert newsletter emails as public HTML mirror pages (see `email-pipe/README.md`).
 
 Future supporting files may include more property-type outputs, skills, scripts, notes, templates, or deployment workflows. Keep this file as the repository-wide source of truth when rules overlap.
 
