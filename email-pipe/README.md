@@ -88,6 +88,11 @@ filter and check `pipe.log` again.
 - **index.html** — regenerated after every email; point the AI at
   `https://alerts.yourdomain.com/` and it can discover the current batch
   without knowing how many files there are.
+- **Day boundary** — "today" comes from the server clock. If `date` in the
+  cPanel Terminal is not in your timezone, uncomment `TZ` in `settings.env`
+  so the counter resets at your midnight; the shared-hosting system clock
+  itself cannot be changed, but `TZ` applies per-process and the pipe
+  exports it to everything it runs.
 - **Allowlist** — anyone who emails the pipe address publishes HTML on your
   subdomain, so keep `ALLOWED_SENDER_DOMAINS` set; list as many domains as
   you need, separated by spaces. (Sender addresses can be spoofed; the
