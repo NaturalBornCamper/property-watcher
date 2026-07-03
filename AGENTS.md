@@ -82,7 +82,7 @@ Extract these fields whenever available. Information may appear in structured li
 3. `PRICE` - rental monthly price in CAD for rental workflows.
 4. `ROOMS` - bedrooms or rooms, preserving the source label when ambiguous.
 5. `SIZE` - living area in square feet.
-6. `LOCATION / POSTAL CODE` - exact address, postal code, borough/neighborhood, or other location text.
+6. `LOCATION / POSTAL CODE / MAP` - exact address, postal code, borough/neighborhood, or other location text, linked to Google Maps when enough location data exists.
 7. `FLOOR` - floor, level, basement, ground floor, elevator context, or unknown.
 8. `LAUNDRY` - in-unit hookups, washer/dryer, shared laundry, none, or unknown.
 9. `COURTYARD` - courtyard, yard, shared yard, balcony/patio only, none, or unknown.
@@ -98,6 +98,7 @@ A rental listing is accepted only when it satisfies all current rental filters:
 1. Postal code prefix must be `H4H` or `H8P`.
 2. Rooms must be at least 2 using the clearest available room or bedroom count.
 3. Size must be at least 900 square feet when a real size is available.
+4. The unit must not be a basement, semi-basement, or partly below-grade apartment.
 
 Postal code handling:
 
@@ -122,6 +123,14 @@ Size handling:
 - Treat obvious platform defaults such as `1 sqft`, `0 sqft`, or similarly impossible values as `Unknown`, not as real size.
 - If a listing says less than 900 sqft in prose or structured data, reject it even if another field is missing.
 
+Basement and demi-sous-sol handling:
+
+- Check structured floor fields, listing titles, amenities, tags, and free-text descriptions for basement indicators.
+- Reject listings described in French as `demi sous-sol`, `demi-sous-sol`, `sous-sol`, `semi sous-sol`, `semi-sous-sol`, or `rez-de-jardin` when the context indicates a partly below-grade unit.
+- Reject listings described in English as `basement`, `basement apartment`, `semi-basement`, `semi basement`, `half-basement`, `half basement`, `partly below grade`, `partially below grade`, `below grade`, `partly underground`, `partially underground`, or `garden level` when the context indicates a partly below-grade unit.
+- Do not reject a listing only because it mentions basement storage, basement parking, basement locker access, or a building basement amenity. The exclusion is for the dwelling unit itself being fully or partly below ground.
+- If the wording is ambiguous, keep the listing out of the accepted table and mention it as unresolved rather than accepting it.
+
 ## Compiled HTML table schema
 
 `docs/index.html` contains the accepted rental table.
@@ -133,7 +142,7 @@ The table must include these columns, in this order:
 3. `Price`
 4. `Rooms`
 5. `Size`
-6. `Location / postal code`
+6. `Location / postal code / map`
 7. `Floor`
 8. `Laundry`
 9. `Courtyard`
@@ -142,11 +151,23 @@ The table must include these columns, in this order:
 
 Each accepted listing row must have exactly eleven cells.
 
-Use short cell values. Escape HTML special characters in user-visible text. Use a normal link for the URL cell:
+Use short cell values. Escape HTML special characters in user-visible text.
+
+Use a stable named `target` value for every external link. Do not use `_blank` for listing or map links. A stable named target opens a new tab/window the first time and reuses the same tab/window when the same link is clicked again.
+
+For the listing URL cell, use a normal link with a stable target derived from the canonical listing URL or listing ID:
 
 ```html
-<a href="https://example.com/listing/123">Listing</a>
+<a href="https://example.com/listing/123" target="listing-123">Listing</a>
 ```
+
+For the location cell, link the visible address/location text to Google Maps when there is enough location information to form a useful search. Use the most precise available query in this order: exact address with postal code, exact address, full postal code, partial postal code plus city/neighborhood, then neighborhood/borough only if nothing more precise exists. URL-encode the Google Maps query and use a stable target derived from the normalized map query:
+
+```html
+<a href="https://www.google.com/maps/search/?api=1&amp;query=123%20Example%20St%2C%20Montreal%2C%20QC%20H4H%201A1" target="map-123-example-st-h4h-1a1">123 Example St, H4H 1A1</a>
+```
+
+If no useful location information exists, use `Unknown` as plain text.
 
 Use `Unknown` for unavailable values.
 
@@ -179,7 +200,7 @@ Only change:
 
 Do not rewrite unrelated rows, change the schema, or perform opportunistic cleanup unless the user explicitly asks.
 
-Before final output or commit, verify that every accepted row satisfies postal-code, room, and size rules.
+Before final output or commit, verify that every accepted row satisfies postal-code, room, size, and basement/semi-basement exclusion rules.
 
 ## Commit behavior
 
@@ -195,7 +216,7 @@ For filtering tasks, provide:
 
 - Accepted listings added or updated.
 - Rejected listings with short rejection reasons when they were close or ambiguous.
-- Unresolved candidates that need manual review, especially missing postal code or ambiguous room count.
+- Unresolved candidates that need manual review, especially missing postal code, ambiguous room count, or ambiguous basement/semi-basement wording.
 - Blocked sources that could not be checked because of bot protection, CAPTCHA, HTTP errors, or access restrictions.
 - Files changed.
 - Commit message and commit SHA when committed; otherwise a proposed commit message.
@@ -212,6 +233,7 @@ Examples:
 - `Switch rental output to compiled HTML`
 - `Add rental listings from daily search`
 - `Update rental listing details`
+- `Update rental filtering rules`
 
 Prefer one logical change per commit unless the user asks otherwise.
 
@@ -225,7 +247,8 @@ Prefer one logical change per commit unless the user asks otherwise.
 - Do not reject a listing only because size is missing or obviously defaulted to `1 sqft`.
 - Do not include less-than-900-sqft listings when a plausible size is available.
 - Do not include studios, bachelor apartments, 1-room, or 1-bedroom listings.
+- Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not ignore the free-text description when structured fields are missing.
-- Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, listing dates, or added dates.
+- Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, listing dates, added dates, or Google Maps links.
 - Do not silently change table schemas.
 - Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.
