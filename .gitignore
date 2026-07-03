@@ -1,2 +1,9 @@
 # Server-specific settings; only settings.env.example belongs in the repo.
 email-pipe/settings.env
+
+# Runtime artifacts created by email-to-html.sh
+email-pipe/pipe.log
+email-pipe/pipe.log.old
+email-pipe/failed/*
+!email-pipe/failed/.gitkeep
+email-pipe/archive/
