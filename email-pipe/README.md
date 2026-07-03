@@ -15,9 +15,12 @@ mirror" intake sources described in `AGENTS.md`.
 
 | File                   | Purpose                                                  |
 | ---------------------- | -------------------------------------------------------- |
-| `email-to-html.sh`     | Entry point the cPanel email filter pipes into (bash)    |
-| `extract-html.py`      | MIME parsing/decoding helper (Python 3 stdlib only)      |
+| `email-to-html.sh`     | Entry point the cPanel email filter pipes into           |
 | `settings.env.example` | Settings template; copy to `settings.env` on the server  |
+
+The script is self-contained bash: MIME parsing and base64/quoted-printable
+decoding are done with embedded `awk` programs and coreutils (`base64`,
+`tr`, `sed`), all present on any cPanel server. No Python or Perl needed.
 
 Created at runtime next to the script: `pipe.log` (log, rotated at ~1 MB) and
 `failed/` (raw copies of emails that could not be processed).
@@ -33,7 +36,7 @@ Created at runtime next to the script: `pipe.log` (log, rotated at ~1 MB) and
 3. **Settings** — `cp settings.env.example settings.env`, then edit
    `OUTPUT_DIR` (the subdomain document root) and `ALLOWED_SENDER_DOMAINS`.
    `chmod 600 settings.env`.
-4. **Permissions** — `chmod 700 email-to-html.sh extract-html.py`.
+4. **Permissions** — `chmod 700 email-to-html.sh`.
 5. **Email address** — cPanel → *Email Accounts* → create a dedicated
    address to receive the alerts, ideally with an unguessable local part
    (e.g. `alerts-x7k2q@yourdomain.com`), and subscribe it to the search
@@ -52,7 +55,6 @@ Created at runtime next to the script: `pipe.log` (log, rotated at ~1 MB) and
 In cPanel → *Terminal* (or over SSH):
 
 ```sh
-command -v python3        # must print a path; otherwise set PYTHON_BIN
 cd ~/email-pipe
 ./email-to-html.sh < message.eml   # a raw email saved from webmail
 tail pipe.log
@@ -71,8 +73,12 @@ real email through the filter and check `pipe.log` again.
 - **Overwrites** — one file per sender domain, always the latest email. Set
   `ARCHIVE_DIR` in `settings.env` to also keep timestamped copies.
 - **Allowlist** — anyone who emails the pipe address publishes HTML on your
-  subdomain, so keep `ALLOWED_SENDER_DOMAINS` set. (Sender addresses can be
-  spoofed; the unguessable address is the second layer.)
+  subdomain, so keep `ALLOWED_SENDER_DOMAINS` set; list as many domains as
+  you need, separated by spaces. (Sender addresses can be spoofed; the
+  unguessable address is the second layer.)
+- **Charset** — the HTML bytes are written unchanged; the charset declared
+  in the email's MIME headers is relabeled into (or injected as) the
+  `<meta charset>` so browsers decode accents correctly.
 - **Never bounces** — the script always exits 0 and writes nothing to
   stdout, because cPanel/Exim turns either into a bounce to the newsletter
   sender. Failures are logged to `pipe.log` and the raw email is saved in
@@ -85,7 +91,5 @@ real email through the filter and check `pipe.log` again.
   repo's `.gitattributes` enforces LF; avoid editors that convert on save).
 - **Nothing in `pipe.log`** — check the script path in the filter, the
   execute bit, and cPanel → *Track Delivery* for pipe errors.
-- **Log says python3 not found** — set `PYTHON_BIN` in `settings.env` to the
-  path reported by `command -v python3` or your host's alt-python path.
 - **Email arrived but no HTML file** — see `pipe.log`; the raw email is in
   `failed/` if parsing failed (e.g. text-only email with no HTML part).

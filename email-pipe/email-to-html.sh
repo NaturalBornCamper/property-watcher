@@ -6,6 +6,9 @@
 # as $OUTPUT_DIR/<sender>.html, where <sender> is derived from the sender's
 # domain (mail from search-alerts@centris.ca becomes centris.html).
 #
+# Self-contained: needs only bash, awk, and coreutils (base64, tr, sed),
+# which are present on any cPanel server. No Python or Perl dependency.
+#
 # cPanel/Exim pipe rules this script follows:
 #   - Never write to stdout: anything on stdout is bounced back to the
 #     sender as a delivery error.
@@ -18,7 +21,7 @@ exec >/dev/null 2>&1
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Load settings, exported so extract-html.py sees them as environment vars.
+# Load settings.
 if [ -f "$SCRIPT_DIR/settings.env" ]; then
     set -a
     . "$SCRIPT_DIR/settings.env"
@@ -52,7 +55,9 @@ if [ -z "$RAW_FILE" ]; then
     log "ERROR: mktemp failed, email discarded"
     exit 0
 fi
-trap 'rm -f "$RAW_FILE"' EXIT
+PART_FILE=""
+TMP_OUT=""
+trap 'rm -f "$RAW_FILE" "$PART_FILE" "$TMP_OUT"' EXIT
 cat > "$RAW_FILE"
 
 fail() {
@@ -78,22 +83,297 @@ if ! mkdir -p "$OUTPUT_DIR"; then
     fail "cannot create OUTPUT_DIR: $OUTPUT_DIR"
 fi
 
-if [ -z "$PYTHON_BIN" ]; then
-    for candidate in python3 /usr/bin/python3 /usr/local/bin/python3; do
-        if command -v "$candidate" >/dev/null 2>&1; then
-            PYTHON_BIN="$candidate"
-            break
-        fi
-    done
-fi
-if [ -z "$PYTHON_BIN" ]; then
-    fail "python3 not found; set PYTHON_BIN in settings.env"
+# --------------------------------------------------------------------------
+# Embedded awk programs
+# --------------------------------------------------------------------------
+
+# Print the (lowercased) domain of the From address in the top headers.
+AWK_FROM=$(cat <<'AWK'
+{
+    line = $0
+    sub(/\r$/, "", line)
+    if (line == "") exit               # end of top headers
+    if (line ~ /^[ \t]/) {             # folded continuation line
+        if (infrom) { sub(/^[ \t]+/, " ", line); fromv = fromv line }
+        next
+    }
+    infrom = (tolower(line) ~ /^from:/)
+    if (infrom) fromv = line
+}
+END {
+    v = fromv
+    if (v == "") exit 1
+    if (match(v, /<[^>]*>/))
+        v = substr(v, RSTART + 1, RLENGTH - 2)
+    else
+        sub(/^[Ff][Rr][Oo][Mm]:[ \t]*/, "", v)
+    n = split(v, parts, "@")
+    if (n < 2) exit 1
+    d = tolower(parts[n])
+    gsub(/[^a-z0-9.-]/, "", d)
+    if (d == "") exit 1
+    print d
+}
+AWK
+)
+
+# Walk the MIME structure and emit the first non-attachment text/html part:
+# first a "META cte=... charset=..." line, then the raw (still-encoded) body.
+# Emits nothing when the message has no text/html part.
+AWK_MIME=$(cat <<'AWK'
+BEGIN { phase = "top"; nb = 0; hcur = "" }
+
+function reset_entity() {
+    e_type = ""; e_bound = ""; e_charset = ""; e_cte = ""; e_attach = 0
+}
+
+function flush_hdr(    lc, rest, cs) {
+    if (hcur == "") return
+    lc = tolower(hcur)
+    if (lc ~ /^content-type:/) {
+        e_type = lc
+        sub(/^content-type:[ \t]*/, "", e_type)
+        sub(/;.*$/, "", e_type)
+        gsub(/[ \t"]/, "", e_type)
+        # Boundary is case-sensitive: locate it on the lowercased copy but
+        # extract from the original header text.
+        if (match(lc, /boundary[ \t]*=[ \t]*"/)) {
+            rest = substr(hcur, RSTART + RLENGTH)
+            sub(/".*$/, "", rest)
+            e_bound = rest
+        } else if (match(lc, /boundary[ \t]*=[ \t]*/)) {
+            rest = substr(hcur, RSTART + RLENGTH)
+            sub(/[;, \t].*$/, "", rest)
+            e_bound = rest
+        }
+        if (match(lc, /charset[ \t]*=[ \t]*"?/)) {
+            cs = substr(lc, RSTART + RLENGTH)
+            sub(/["';, \t].*$/, "", cs)
+            e_charset = cs
+        }
+    } else if (lc ~ /^content-transfer-encoding:/) {
+        e_cte = lc
+        sub(/^content-transfer-encoding:[ \t]*/, "", e_cte)
+        gsub(/[ \t"]/, "", e_cte)
+    } else if (lc ~ /^content-disposition:[ \t]*attachment/) {
+        e_attach = 1
+    }
+    hcur = ""
+}
+
+function entity_done() {
+    if (e_type ~ /^multipart\// && e_bound != "") {
+        bstack[++nb] = e_bound
+        phase = "search"
+    } else if (e_type == "text/html" && !e_attach && !found) {
+        printf "META cte=%s charset=%s\n", e_cte, e_charset
+        found = 1
+        phase = "cap"
+    } else {
+        phase = "search"
+    }
+}
+
+{
+    line = $0
+    sub(/\r$/, "", line)
+
+    # Boundary delimiters (checked against every open multipart level).
+    if (nb > 0 && substr(line, 1, 2) == "--") {
+        bline = line
+        sub(/[ \t]+$/, "", bline)
+        for (i = nb; i >= 1; i--) {
+            if (bline == "--" bstack[i]) {
+                if (phase == "cap") exit
+                flush_hdr()
+                nb = i
+                reset_entity()
+                phase = "phdr"
+                next
+            }
+            if (bline == "--" bstack[i] "--") {
+                if (phase == "cap") exit
+                nb = i - 1
+                phase = "search"
+                next
+            }
+        }
+    }
+
+    if (phase == "top" || phase == "phdr") {
+        if (line == "") {
+            flush_hdr()
+            entity_done()
+            next
+        }
+        if (line ~ /^[ \t]/) {
+            sub(/^[ \t]+/, " ", line)
+            hcur = hcur line
+            next
+        }
+        flush_hdr()
+        hcur = line
+        next
+    }
+
+    if (phase == "cap") print line
+    # phase "search": skip preamble/epilogue and unwanted parts
+}
+AWK
+)
+
+# Decode quoted-printable (portable awk, byte-oriented under LC_ALL=C).
+AWK_QP=$(cat <<'AWK'
+BEGIN {
+    for (i = 0; i < 256; i++)
+        hex2ch[sprintf("%02X", i)] = sprintf("%c", i)
+}
+{
+    line = $0
+    sub(/\r$/, "", line)
+    soft = 0
+    if (line ~ /=$/) {                 # soft line break
+        soft = 1
+        line = substr(line, 1, length(line) - 1)
+    }
+    out = ""
+    while ((p = index(line, "=")) > 0) {
+        out = out substr(line, 1, p - 1)
+        h = toupper(substr(line, p + 1, 2))
+        if (length(h) == 2 && h in hex2ch) {
+            out = out hex2ch[h]
+            line = substr(line, p + 3)
+        } else {                       # invalid escape: keep literal "="
+            out = out "="
+            line = substr(line, p + 1)
+        }
+    }
+    out = out line
+    printf "%s", out
+    if (!soft) printf "\n"
+}
+AWK
+)
+
+# --------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------
+
+# Sender domain -> file base name: the registrable name without its public
+# suffix (@centris.ca and @e.centris.ca both become "centris"; two-part
+# suffixes such as .qc.ca or .co.uk are handled).
+file_base_name() {
+    local two_part=" qc.ca on.ca bc.ca ab.ca mb.ca sk.ca ns.ca nb.ca nl.ca pe.ca gc.ca co.uk org.uk ac.uk com.au net.au org.au "
+    local -a labels
+    local IFS=.
+    read -r -a labels <<< "$1"
+    local n=${#labels[@]} name
+    if [ "$n" -ge 3 ] && [[ "$two_part" == *" ${labels[n-2]}.${labels[n-1]} "* ]]; then
+        name=${labels[n-3]}
+    elif [ "$n" -ge 2 ]; then
+        name=${labels[n-2]}
+    else
+        name=${labels[0]}
+    fi
+    name=$(printf '%s' "$name" | tr -cd 'a-z0-9-')
+    printf '%s' "${name:0:64}"
+}
+
+# --------------------------------------------------------------------------
+# Main
+# --------------------------------------------------------------------------
+
+from_domain=$(LC_ALL=C awk "$AWK_FROM" "$RAW_FILE")
+if [ -z "$from_domain" ]; then
+    fail "could not determine sender domain from the From header"
 fi
 
-if "$PYTHON_BIN" "$SCRIPT_DIR/extract-html.py" < "$RAW_FILE"; then
-    rm -f "$RAW_FILE"
+# Allowlist: space-separated domains; subdomains match automatically.
+if [ -n "$ALLOWED_SENDER_DOMAINS" ]; then
+    allowed_lc=$(printf '%s' "$ALLOWED_SENDER_DOMAINS" | tr 'A-Z' 'a-z')
+    allowed=0
+    for d in $allowed_lc; do
+        case "$from_domain" in
+            "$d" | *".$d") allowed=1; break ;;
+        esac
+    done
+    if [ "$allowed" -ne 1 ]; then
+        log "skipped: sender domain $from_domain is not in ALLOWED_SENDER_DOMAINS"
+        exit 0
+    fi
+fi
+
+PART_FILE="$(mktemp "${TMPDIR:-/tmp}/email-pipe.XXXXXX")"
+LC_ALL=C awk "$AWK_MIME" "$RAW_FILE" > "$PART_FILE"
+
+if [ ! -s "$PART_FILE" ]; then
+    fail "no text/html part found in email from $from_domain"
+fi
+
+meta=$(head -n 1 "$PART_FILE")
+case "$meta" in
+    "META "*) ;;
+    *) fail "unexpected extractor output for email from $from_domain" ;;
+esac
+cte=$(printf '%s' "$meta" | sed -n 's/.*cte=\([^ ]*\).*/\1/p')
+charset=$(printf '%s' "$meta" | sed -n 's/.*charset=\([^ ]*\).*/\1/p' | tr -cd 'a-z0-9._-')
+
+name=$(file_base_name "$from_domain")
+name=${name:-unknown}
+DEST="$OUTPUT_DIR/$name.html"
+TMP_OUT="$(mktemp "$OUTPUT_DIR/.$name.XXXXXX")"
+
+decode_body() {
+    case "$cte" in
+        base64)           tr -d ' \t\r' | base64 -d ;;
+        quoted-printable) LC_ALL=C awk "$AWK_QP" ;;
+        *)                cat ;;   # 7bit / 8bit / binary / unset
+    esac
+}
+
+set -o pipefail
+if ! tail -n +2 "$PART_FILE" | decode_body > "$TMP_OUT"; then
+    set +o pipefail
+    fail "could not decode ${cte:-7bit} body from $from_domain"
+fi
+set +o pipefail
+
+if [ ! -s "$TMP_OUT" ]; then
+    fail "decoded HTML body is empty (from $from_domain)"
+fi
+
+# The bytes are written unchanged (no transcoding), so the charset declared
+# in the MIME headers is the true encoding of the file. Newsletter templates
+# often carry a stale <meta charset> that disagrees with it, so relabel any
+# existing meta to the header charset; when the HTML declares no charset at
+# all, prepend one (the HTML5 encoding prescan honors it regardless of
+# position).
+if grep -qi '<meta[^>]*charset' "$TMP_OUT"; then
+    if [ -n "$charset" ]; then
+        FIXED="$(mktemp "$OUTPUT_DIR/.$name.XXXXXX")"
+        sed 's/\(<[Mm][Ee][Tt][Aa][^>]*[Cc][Hh][Aa][Rr][Ss][Ee][Tt][[:space:]]*=[[:space:]]*["'\'']\{0,1\}\)[A-Za-z0-9_.:-]*/\1'"$charset"'/g' \
+            "$TMP_OUT" > "$FIXED" && mv -f "$FIXED" "$TMP_OUT"
+    fi
 else
-    fail "extract-html.py failed"
+    INJECTED="$(mktemp "$OUTPUT_DIR/.$name.XXXXXX")"
+    { printf '<meta charset="%s">\n' "${charset:-utf-8}"; cat "$TMP_OUT"; } > "$INJECTED"
+    mv -f "$INJECTED" "$TMP_OUT"
+fi
+
+chmod 644 "$TMP_OUT"
+if ! mv -f "$TMP_OUT" "$DEST"; then
+    fail "could not move HTML into place: $DEST"
+fi
+
+size=$(wc -c < "$DEST")
+log "wrote $DEST (${size:-?} bytes, cte=${cte:-7bit}, from $from_domain)"
+
+if [ -n "$ARCHIVE_DIR" ]; then
+    if mkdir -p "$ARCHIVE_DIR"; then
+        cp -p "$DEST" "$ARCHIVE_DIR/$name-$(date '+%Y%m%d-%H%M%S').html"
+    else
+        log "WARNING: cannot create ARCHIVE_DIR: $ARCHIVE_DIR"
+    fi
 fi
 
 exit 0
