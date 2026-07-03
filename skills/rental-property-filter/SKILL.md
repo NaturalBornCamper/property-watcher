@@ -1,6 +1,6 @@
 ---
 name: rental-property-filter
-description: Filter rental property listings for the Property Watcher project. Use when the user provides rental listing-result URLs, individual listing URLs, raw listing HTML, or public newsletter/search-alert HTML URLs and wants ChatGPT to extract property details from structured fields or descriptions, use safe per-domain request limits, reject listings outside H4H or H8P, reject listings with fewer than 2 rooms, reject listings under 900 square feet when real size is available, report blocked sources, and update and commit docs/index.html compiled-table changes directly unless the user explicitly asks for review-only or no-commit behavior.
+description: Filter rental property listings for the Property Watcher project. Use when the user provides rental listing-result URLs, individual listing URLs, raw listing HTML, newsletter-mirror URLs, or public search-alert HTML URLs and wants ChatGPT to extract property details from structured fields or descriptions, use safe per-domain request limits, reject listings outside H4H or H8P, reject listings with fewer than 2 rooms, reject listings under 900 square feet when real size is available, reject basement/semi-basement units, report blocked sources, and update and commit docs/index.html compiled-table changes directly unless the user explicitly asks for review-only or no-commit behavior.
 ---
 
 # Rental Property Filter
@@ -28,7 +28,7 @@ For each run, provide:
 
 1. Accepted rental listings added to or updated in `docs/index.html`.
 2. Rejected listings with concise reasons when inspected.
-3. Unresolved candidates that look promising but are missing required proof, especially postal code or room count.
+3. Unresolved candidates that look promising but are missing required proof, especially postal code, room count, or basement/semi-basement status.
 4. Blocked sources that could not be inspected because of CAPTCHA, bot detection, 403, 429, or access restrictions.
 5. Compiled-table rows sorted newest first.
 6. Files changed and commit SHA when committed.
@@ -42,7 +42,7 @@ Use the minimum number of requests needed to make an accurate decision.
 - Fetch listing-result pages or newsletter HTML first.
 - Extract all available card-level details before opening detail pages.
 - Deduplicate candidate URLs before opening detail pages.
-- Open an individual listing page only when required to resolve postal code, rooms, size, floor, laundry, courtyard, address, price, date listed, or ambiguity.
+- Open an individual listing page only when required to resolve postal code, rooms, size, floor, laundry, courtyard, address, price, date listed, basement/semi-basement status, or ambiguity.
 - Allow at most one active request at a time per domain.
 - Requests to different domains may run in parallel when the tool environment supports it.
 - Wait at least 5 seconds between requests to the same domain when using a live browser or HTTP client.
@@ -56,8 +56,8 @@ Use the minimum number of requests needed to make an accurate decision.
 For each candidate listing:
 
 1. Record the source URL and canonical listing URL.
-2. Extract price, date listed, rooms, size, location text, postal code, address, floor, laundry, courtyard, and notes from the listing card if possible.
-3. Search both structured fields and free-text descriptions for key details. Square footage, room count, floor, laundry hookups, courtyard access, postal code, and address may appear only in the description.
+2. Extract price, date listed, rooms, size, location text, postal code, address, floor, laundry, courtyard, basement/semi-basement indicators, and notes from the listing card if possible.
+3. Search both structured fields and free-text descriptions for key details. Square footage, room count, floor, laundry hookups, courtyard access, postal code, address, and basement/semi-basement wording may appear only in the description.
 4. Follow the detail page only when card-level information is insufficient or suspicious.
 5. Normalize values without inventing missing facts:
    - Date added is the date the listing is added to `docs/index.html`.
@@ -78,6 +78,7 @@ Accept a listing only when all these conditions are satisfied:
 1. Postal code prefix starts with `H4H` or `H8P`.
 2. Listing has at least 2 rooms or bedrooms using the clearest source label.
 3. Listing has at least 900 sqft when a plausible real size is available.
+4. Listing is not a basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling unit.
 
 Do not accept listings with missing postal code unless an exact address or official detail page reliably establishes the postal prefix.
 
@@ -87,7 +88,11 @@ Reject listings with a plausible size below 900 sqft.
 
 Reject studios, bachelor apartments, 1-room, and 1-bedroom listings.
 
-Keep ambiguous room counts out of the accepted table and show them as unresolved unless the user has already provided a trusted interpretation rule.
+Reject listings whose dwelling unit is fully or partly below ground. French indicators include `demi sous-sol`, `demi-sous-sol`, `sous-sol`, `semi sous-sol`, `semi-sous-sol`, and `rez-de-jardin` when the context indicates a partly below-grade unit. English indicators include `basement`, `basement apartment`, `semi-basement`, `semi basement`, `half-basement`, `half basement`, `partly below grade`, `partially below grade`, `below grade`, `partly underground`, `partially underground`, and `garden level` when the context indicates a partly below-grade unit.
+
+Do not reject only because a listing mentions basement storage, basement parking, basement locker access, or a building basement amenity. The exclusion is for the dwelling unit itself being fully or partly below ground.
+
+Keep ambiguous room counts or ambiguous basement/semi-basement wording out of the accepted table and show them as unresolved unless the user has already provided a trusted interpretation rule.
 
 ## Compiled table row format
 
@@ -98,7 +103,7 @@ Draft accepted rows for the `docs/index.html` table with exactly eleven cells:
 3. `Price`
 4. `Rooms`
 5. `Size`
-6. `Location / postal code`
+6. `Location / postal code / map`
 7. `Floor`
 8. `Laundry`
 9. `Courtyard`
@@ -114,20 +119,40 @@ Example row:
   <td>$2,100/mo</td>
   <td>2 bedrooms</td>
   <td>950 sqft</td>
-  <td>123 Example St, H4H 1A1</td>
+  <td><a href="https://www.google.com/maps/search/?api=1&amp;query=123%20Example%20St%2C%20Montreal%2C%20QC%20H4H%201A1" target="map-123-example-st-h4h-1a1">123 Example St, H4H 1A1</a></td>
   <td>2nd floor</td>
   <td>In-unit hookups</td>
   <td>Shared courtyard</td>
-  <td><a href="https://example.com/listing/123">Listing</a></td>
+  <td><a href="https://example.com/listing/123" target="listing-123">Listing</a></td>
   <td>Size verified on detail page</td>
 </tr>
 ```
 
 Use `Unknown` for unavailable values.
 
-Escape HTML special characters in text cells.
+Escape HTML special characters in text cells. URL-encode map query parameters.
+
+Use a stable named `target` value for every listing and map link. Do not use `_blank`. A stable named target opens a new tab/window the first time and reuses the same tab/window when the same link is clicked again.
+
+For listing links, derive the target from the canonical listing URL or listing ID, such as `target="listing-123"`.
+
+For Google Maps links, derive the target from the normalized map query, such as `target="map-123-example-st-h4h-1a1"`.
 
 Sort accepted rows by `Date listed` newest first before committing updates. For equal dates, sort by `Date added` newest first. Put `Unknown` listing dates below dated listings.
+
+## Location and Google Maps link handling
+
+The `Location / postal code / map` cell should be a Google Maps link whenever enough location information exists.
+
+Use the most precise available map query in this order:
+
+1. Exact address plus full postal code.
+2. Exact address.
+3. Full postal code.
+4. Partial postal code plus city/neighborhood.
+5. Neighborhood/borough only if nothing more precise exists.
+
+Do not fabricate missing address or postal-code details. If no useful location data exists, use `Unknown` as plain text.
 
 ## Rejection, unresolved, and blocked summary format
 
@@ -139,10 +164,12 @@ Use compact, auditable explanations:
 - [Listing](https://example.com/1) - postal code starts with H3Z, not H4H or H8P.
 - [Listing](https://example.com/2) - 1 bedroom.
 - [Listing](https://example.com/3) - 750 sqft real listed size.
+- [Listing](https://example.com/4) - described as demi-sous-sol / semi-basement.
 
 ### Unresolved
 
-- [Listing](https://example.com/4) - location says Verdun, but no postal code or exact address found.
+- [Listing](https://example.com/5) - location says Verdun, but no postal code or exact address found.
+- [Listing](https://example.com/6) - floor text mentions garden level, but unclear whether the unit is below grade.
 
 ### Blocked
 
@@ -163,6 +190,8 @@ Before committing edits:
 6. Keep the table sorted newest first.
 7. Preserve original `Date added` for existing rows unless the user explicitly asks otherwise.
 8. Update blocked/unresolved notes when useful.
+9. Verify listing links and Google Maps links use stable named `target` values.
+10. Verify accepted rows do not contain basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 
 ## GitHub commit behavior
 
@@ -181,9 +210,10 @@ If the available GitHub tool can only write one file per commit, say so and make
 
 - Do not include listings outside `H4H` or `H8P`.
 - Do not include studios, bachelor apartments, 1-room, or 1-bedroom listings.
+- Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not reject missing or obviously defaulted size values as under 900 sqft.
 - Do not ignore free-text descriptions when structured fields are missing.
-- Do not fabricate postal codes, addresses, sizes, floors, laundry, courtyard, listing dates, or added dates.
+- Do not fabricate postal codes, addresses, sizes, floors, laundry, courtyard, listing dates, added dates, or map links.
 - Do not bypass bot protection or rate limits.
 - Do not stop the full run when a source is blocked; record it, continue, and report it at the end.
 - Do not run multiple simultaneous requests to the same domain.

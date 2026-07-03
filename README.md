@@ -37,6 +37,7 @@ The current rental filters are:
 - Postal code prefix must be `H4H` or `H8P`.
 - Listing must have at least 2 rooms or bedrooms, using the clearest label available from the source.
 - Listing must be at least 900 square feet when a real size is available.
+- Listing must not be a basement, semi-basement, `demi sous-sol`, or otherwise partly below-grade unit.
 - Missing size, or an obvious site default such as `1 sqft`, should be treated as unknown size instead of an automatic rejection.
 
 ## Using the skill
