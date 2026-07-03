@@ -51,6 +51,8 @@ Supported inputs:
 
 For newsletter HTML, extract listing URLs, listing cards, prices, dates, and summary details from the HTML before deciding whether to fetch detail pages.
 
+The email-pipe mirror publishes each alert email as a numbered file per sender domain and day (for example `centris-1.html`, `centris-2.html`), because alert sites send one email per saved search. The mirror root serves an auto-generated `index.html` listing the currently published files, and an `archive/` folder holds previous days. When given the mirror root URL, read `index.html` and process every listed file.
+
 ## Request etiquette, concurrency, and blocked sources
 
 Be conservative with requests, but use safe parallelism across different domains.

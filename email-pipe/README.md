@@ -5,10 +5,14 @@ HTML pages. A cPanel email filter pipes each incoming email into
 `email-to-html.sh`; the script extracts the HTML body and writes it into the
 document root of a subdomain, named after the sender's domain:
 
-    search-alerts@centris.ca  →  https://alerts.yourdomain.com/centris.html
+    search-alerts@centris.ca  →  https://alerts.yourdomain.com/centris-1.html
 
-Each new email from the same domain overwrites the previous file, so the URL
-always shows the latest alert. These mirror URLs are the "public newsletter
+Alert sites send one email per saved search (e.g. one for LaSalle, one for
+Verdun), so every email of the day gets the next number for its sender
+domain: `centris-1.html`, `centris-2.html`, ... The first email from a
+domain on a later day moves the previous batch into `archive/` and restarts
+at 1. An auto-generated `index.html` lists the currently published files, so
+the AI only needs the root URL. These mirror URLs are the "public newsletter
 mirror" intake sources described in `AGENTS.md`.
 
 ## Files
@@ -24,13 +28,14 @@ decoding are done with embedded `awk` programs and coreutils (`base64`,
 
 Created at runtime next to the script: `pipe.log` (log, rotated at ~1 MB) and
 `failed/` (raw copies of emails that could not be processed). Created inside
-`OUTPUT_DIR`: `archive/` (timestamped history of every published version).
+`OUTPUT_DIR`: `archive/` (previous days' files, renamed with their date and
+time) and `index.html` (auto-generated list of the published files).
 
 ## Server setup
 
 1. **Subdomain** — cPanel → *Domains* → create e.g. `alerts.yourdomain.com`
    and note its document root (e.g. `/home/YOURUSER/alerts.yourdomain.com`).
-   Optionally drop an empty `index.html` in it to avoid a directory listing.
+   The script maintains an `index.html` there itself.
 2. **Upload** — put this folder in your home directory, e.g.
    `/home/YOURUSER/email-pipe/`. Do **not** put it inside `public_html`
    (the settings and logs must not be web-accessible).
@@ -63,20 +68,26 @@ tail pipe.log
 
 To get a `message.eml`, open an alert email in webmail and use
 "Download" / "Show message source". Then open
-`https://alerts.yourdomain.com/centris.html` in a browser. After that, send a
-real email through the filter and check `pipe.log` again.
+`https://alerts.yourdomain.com/` in a browser: the index lists the published
+files (e.g. `centris-1.html`). After that, send a real email through the
+filter and check `pipe.log` again.
 
 ## Behavior notes
 
-- **Filename** — sender domain minus the public suffix: `@centris.ca` and
-  `@e.centris.ca` both become `centris.html`; common two-part suffixes such
-  as `qc.ca` or `co.uk` are handled. The name is sanitized to `a-z0-9-`.
-- **Overwrites** — one file per sender domain, always the latest email. A
-  timestamped copy of every version is also kept in `archive/` next to the
-  published files (e.g. `archive/centris-20260703-153000.html`), so an alert
-  replaced by a newer one is never lost. Note that `archive/` lives under
-  the subdomain too, so old versions stay reachable by URL; delete old
-  archive files whenever you want to reclaim space.
+- **Filename** — sender domain minus the public suffix, plus the day's
+  counter: `@centris.ca` and `@e.centris.ca` both become `centris-N.html`;
+  common two-part suffixes such as `qc.ca` or `co.uk` are handled. The name
+  is sanitized to `a-z0-9-`.
+- **Daily batches** — numbering restarts when the first email from a domain
+  arrives on a later day (file dates are compared against today); the
+  previous batch moves to `archive/`, renamed with its date and time (e.g.
+  `archive/centris-20260703-153000.html`). The latest batch stays published
+  until the next one arrives. `archive/` lives under the subdomain too, so
+  old versions stay reachable by URL; delete old archive files whenever you
+  want to reclaim space.
+- **index.html** — regenerated after every email; point the AI at
+  `https://alerts.yourdomain.com/` and it can discover the current batch
+  without knowing how many files there are.
 - **Allowlist** — anyone who emails the pipe address publishes HTML on your
   subdomain, so keep `ALLOWED_SENDER_DOMAINS` set; list as many domains as
   you need, separated by spaces. (Sender addresses can be spoofed; the

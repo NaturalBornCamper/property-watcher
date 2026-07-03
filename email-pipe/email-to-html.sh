@@ -57,7 +57,9 @@ if [ -z "$RAW_FILE" ]; then
 fi
 PART_FILE=""
 TMP_OUT=""
-trap 'rm -f "$RAW_FILE" "$PART_FILE" "$TMP_OUT"' EXIT
+INDEX_TMP=""
+HAVE_LOCK=""
+trap 'rm -f "$RAW_FILE" "$PART_FILE" "$TMP_OUT" "$INDEX_TMP"; [ -n "$HAVE_LOCK" ] && rmdir "$LOCK_DIR" 2>/dev/null' EXIT
 cat > "$RAW_FILE"
 
 fail() {
@@ -320,7 +322,8 @@ charset=$(printf '%s' "$meta" | sed -n 's/.*charset=\([^ ]*\).*/\1/p' | tr -cd '
 
 name=$(file_base_name "$from_domain")
 name=${name:-unknown}
-DEST="$OUTPUT_DIR/$name.html"
+# index.html is reserved for the generated file list.
+[ "$name" = "index" ] && name="index-mail"
 TMP_OUT="$(mktemp "$OUTPUT_DIR/.$name.XXXXXX")"
 
 decode_body() {
@@ -361,6 +364,74 @@ else
 fi
 
 chmod 644 "$TMP_OUT"
+
+# --------------------------------------------------------------------------
+# Publish: one numbered file per email, counter restarting each day
+# --------------------------------------------------------------------------
+#
+# Alert sites send one email per saved search, so a single day can yield
+# centris-1.html, centris-2.html, ... The first email from a domain on a
+# later day (file mtimes are compared against today) moves that domain's
+# previous batch into archive/ and restarts the counter at 1. The published
+# files are listed in an auto-generated index.html.
+
+ARCHIVE_DIR="$OUTPUT_DIR/archive"
+if ! mkdir -p "$ARCHIVE_DIR"; then
+    fail "cannot create archive folder: $ARCHIVE_DIR"
+fi
+
+# Serialize the numbering/rotation against a second email arriving at the
+# same moment.
+LOCK_DIR="$OUTPUT_DIR/.lock"
+tries=0
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    # Steal locks left behind by a crashed run.
+    if [ -n "$(find "$LOCK_DIR" -maxdepth 0 -mmin +2 2>/dev/null)" ]; then
+        rmdir "$LOCK_DIR" 2>/dev/null
+        continue
+    fi
+    tries=$((tries + 1))
+    if [ "$tries" -ge 60 ]; then
+        log "WARNING: could not acquire $LOCK_DIR after 30s, proceeding anyway"
+        break
+    fi
+    sleep 0.5
+done
+[ "$tries" -lt 60 ] && HAVE_LOCK=1
+
+archive_by_mtime() {
+    local stamp dest n
+    stamp=$(date -r "$1" '+%Y%m%d-%H%M%S')
+    dest="$ARCHIVE_DIR/$name-$stamp.html"
+    n=2
+    while [ -e "$dest" ]; do    # two files can share an mtime second
+        dest="$ARCHIVE_DIR/$name-$stamp-$n.html"
+        n=$((n + 1))
+    done
+    mv "$1" "$dest"
+}
+
+# File left over from the older one-file-per-domain scheme.
+if [ -e "$OUTPUT_DIR/$name.html" ]; then
+    archive_by_mtime "$OUTPUT_DIR/$name.html"
+fi
+
+today=$(date '+%Y%m%d')
+max=0
+for f in "$OUTPUT_DIR/$name-"[0-9]*.html; do
+    [ -e "$f" ] || continue
+    if [ "$(date -r "$f" '+%Y%m%d')" != "$today" ]; then
+        archive_by_mtime "$f"
+    else
+        idx=${f##*-}
+        idx=${idx%.html}
+        if [ "$idx" -gt "$max" ] 2>/dev/null; then
+            max=$idx
+        fi
+    fi
+done
+
+DEST="$OUTPUT_DIR/$name-$((max + 1)).html"
 if ! mv -f "$TMP_OUT" "$DEST"; then
     fail "could not move HTML into place: $DEST"
 fi
@@ -368,13 +439,28 @@ fi
 size=$(wc -c < "$DEST")
 log "wrote $DEST (${size:-?} bytes, cte=${cte:-7bit}, from $from_domain)"
 
-# Keep a timestamped copy of every version next to the published files, so
-# an alert overwritten by a newer one is never lost.
-ARCHIVE_DIR="$OUTPUT_DIR/archive"
-if mkdir -p "$ARCHIVE_DIR"; then
-    cp -p "$DEST" "$ARCHIVE_DIR/$name-$(date '+%Y%m%d-%H%M%S').html"
-else
-    log "WARNING: cannot create archive folder: $ARCHIVE_DIR"
+# Regenerate index.html so the currently published files are discoverable
+# from the root URL alone.
+INDEX_TMP="$(mktemp "$OUTPUT_DIR/.index.XXXXXX")"
+{
+    printf '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>Alert mirror</title></head><body>\n'
+    printf '<h1>Alert mirror</h1>\n'
+    printf '<p>Last updated: %s</p>\n<ul>\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+    for f in "$OUTPUT_DIR"/*.html; do
+        [ -e "$f" ] || continue
+        base=${f##*/}
+        [ "$base" = "index.html" ] && continue
+        printf '<li><a href="%s">%s</a> &#8212; %s</li>\n' \
+            "$base" "$base" "$(date -r "$f" '+%Y-%m-%d %H:%M')"
+    done
+    printf '</ul>\n</body></html>\n'
+} > "$INDEX_TMP"
+chmod 644 "$INDEX_TMP"
+mv -f "$INDEX_TMP" "$OUTPUT_DIR/index.html"
+
+if [ -n "$HAVE_LOCK" ]; then
+    rmdir "$LOCK_DIR" 2>/dev/null
+    HAVE_LOCK=""
 fi
 
 exit 0

@@ -16,6 +16,7 @@ The user may provide:
 - Listing-result page URLs already pre-filtered on rental/property websites.
 - Individual rental listing URLs.
 - Public URLs containing HTML copied from search-alert newsletters.
+- A newsletter-mirror root URL whose `index.html` lists one or more numbered files per site for the current batch (for example `centris-1.html`, `centris-2.html`); fetch and process every listed file.
 - Raw HTML copied directly into the conversation.
 - Notes overriding a specific run, such as temporary price limits or preferred sites.
 
