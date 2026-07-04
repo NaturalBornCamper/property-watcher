@@ -36,20 +36,21 @@ Do not store FTP, SFTP, SSH, cPanel, or hosting passwords in this repository. Us
 
 When updating accepted listings, use `docs/index.html` as the source of truth for current accepted listings and prior decisions.
 
-Use listing websites, public listing pages, and public newsletter/search-alert HTML only as sources for current property data. Do not assume rendered website summaries are complete. Listing cards often omit floor, laundry, courtyard, square footage, postal code, exact address, or date details.
+Use listing websites, public listing pages, and public newsletter/search-alert HTML only as sources for current property data. Do not assume rendered website summaries are complete. Listing cards often omit floor, laundry, courtyard, square footage, postal code, exact address, thumbnail image, or date details.
 
-Prefer official listing details from the listing page when available. Use search-result cards only when they contain enough reliable information to decide eligibility.
+Prefer the user's newsletter-generated HTML mirror as the default intake source. Use individual listing pages or live search-result pages only when the user provides them directly or when the newsletter HTML is missing details that are needed for filtering.
 
 ## Property intake sources
 
-Supported inputs:
+Supported inputs, in preferred order:
 
-- Listing-result page URLs already pre-filtered by the user on a property website.
-- Individual listing URLs.
-- Public URLs containing HTML from a search-alert newsletter.
-- Raw HTML pasted by the user.
+- Public URLs containing newsletter-generated HTML from a search-alert email.
+- A newsletter-mirror root URL whose `index.html` lists one or more numbered files per site for the current batch.
+- Raw newsletter/search-alert HTML pasted by the user.
+- Individual listing URLs, as a rare fallback or explicit user-provided exception.
+- Listing-result page URLs, as a rare fallback or explicit user-provided exception.
 
-For newsletter HTML, extract listing URLs, listing cards, prices, dates, and summary details from the HTML before deciding whether to fetch detail pages.
+For newsletter HTML, extract listing URLs, thumbnail image URLs, listing cards, prices, dates, and summary details from the HTML before deciding whether to fetch detail pages.
 
 The email-pipe mirror publishes each alert email as a numbered file per sender domain and day (for example `centris-1.html`, `centris-2.html`), because alert sites send one email per saved search. The mirror root serves an auto-generated `index.html` listing the currently published files, and an `archive/` folder holds previous days. When given the mirror root URL, read `index.html` and process every listed file.
 
@@ -63,7 +64,7 @@ Be conservative with requests, but use safe parallelism across different domains
 - Example: one request to `domain-a.com`, one request to `domain-b.com`, and one request to `domain-c.com` may run at the same time; do not run three simultaneous requests to `domain-a.com`.
 - Wait at least 5 seconds between requests to the same domain when using a live browser or HTTP client.
 - Use longer waits, around 10 seconds, when opening many individual detail pages from the same site.
-- Follow detail-page links only when the list page or newsletter card does not contain enough information to decide eligibility or fill important fields.
+- Follow detail-page links only when the newsletter HTML, list page, or listing card does not contain enough information to decide eligibility or fill important fields.
 - Deduplicate URLs before fetching detail pages.
 - If a site returns bot protection, CAPTCHA, 403, 429, unusual blocking behavior, or an access error, record the blocked source and continue with the next source or next domain.
 - Report blocked sources at the end with the URL, domain, observed block type, and what information could not be checked.
@@ -86,7 +87,7 @@ Extract these fields whenever available. Information may appear in structured li
 7. `FLOOR` - floor, level, basement, ground floor, elevator context, or unknown.
 8. `LAUNDRY` - in-unit hookups, washer/dryer, shared laundry, none, or unknown.
 9. `COURTYARD` - courtyard, yard, shared yard, balcony/patio only, none, or unknown.
-10. `URL` - canonical listing URL.
+10. `LISTING` - main listing thumbnail image linked to the canonical listing URL.
 11. `NOTES` - concise uncertainty notes or source-specific caveats.
 
 Do not fabricate missing fields. Use `Unknown` when a field cannot be found after reasonable inspection.
@@ -131,6 +132,25 @@ Basement and demi-sous-sol handling:
 - Do not reject a listing only because it mentions basement storage, basement parking, basement locker access, or a building basement amenity. The exclusion is for the dwelling unit itself being fully or partly below ground.
 - If the wording is ambiguous, keep the listing out of the accepted table and mention it as unresolved rather than accepting it.
 
+## Thumbnail handling
+
+Use the main thumbnail image for the `Listing` column.
+
+Preferred thumbnail sources, in order:
+
+1. The primary image from the newsletter-generated HTML listing card.
+2. The primary image from a user-provided search-result page listing card.
+3. The first listing photo or `og:image` from the detail page, only if the detail page is already being fetched for other required data.
+4. A linked visual fallback only when no source thumbnail is available.
+
+Do not fetch extra detail pages solely to improve a thumbnail when the newsletter HTML already contains enough data to accept or reject the listing.
+
+Preserve the source image URL when it is public and stable enough for browser display. Do not download or rehost listing images unless the user explicitly asks for a separate image-mirroring workflow.
+
+Every listing image must be inside the listing link. Use descriptive `alt` text such as the address or `Listing thumbnail for 123 Example St`. Use `loading="lazy"` and `referrerpolicy="no-referrer"` on thumbnail images.
+
+If no source thumbnail is available, use a linked visual fallback such as a small `No image` placeholder, keep the listing link, and note `Thumbnail unavailable from source` in `NOTES` when helpful.
+
 ## Compiled HTML table schema
 
 `docs/index.html` contains the accepted rental table.
@@ -146,7 +166,7 @@ The table must include these columns, in this order:
 7. `Floor`
 8. `Laundry`
 9. `Courtyard`
-10. `URL`
+10. `Listing`
 11. `Notes`
 
 Each accepted listing row must have exactly eleven cells.
@@ -155,10 +175,12 @@ Use short cell values. Escape HTML special characters in user-visible text.
 
 Use a stable named `target` value for every external link. Do not use `_blank` for listing or map links. A stable named target opens a new tab/window the first time and reuses the same tab/window when the same link is clicked again.
 
-For the listing URL cell, use a normal link with a stable target derived from the canonical listing URL or listing ID:
+For the listing cell, use a linked thumbnail image with a stable target derived from the canonical listing URL or listing ID:
 
 ```html
-<a href="https://example.com/listing/123" target="listing-123">Listing</a>
+<a href="https://example.com/listing/123" target="listing-123" class="listing-link">
+  <img src="https://example.com/photo.jpg" alt="Listing thumbnail for 123 Example St" class="listing-thumb" loading="lazy" referrerpolicy="no-referrer">
+</a>
 ```
 
 For the location cell, link the visible address/location text to Google Maps when there is enough location information to form a useful search. Use the most precise available query in this order: exact address with postal code, exact address, full postal code, partial postal code plus city/neighborhood, then neighborhood/borough only if nothing more precise exists. URL-encode the Google Maps query and use a stable target derived from the normalized map query:
@@ -216,7 +238,7 @@ For filtering tasks, provide:
 
 - Accepted listings added or updated.
 - Rejected listings with short rejection reasons when they were close or ambiguous.
-- Unresolved candidates that need manual review, especially missing postal code, ambiguous room count, or ambiguous basement/semi-basement wording.
+- Unresolved candidates that need manual review, especially missing postal code, ambiguous room count, ambiguous basement/semi-basement wording, or missing thumbnail when no source image exists.
 - Blocked sources that could not be checked because of bot protection, CAPTCHA, HTTP errors, or access restrictions.
 - Files changed.
 - Commit message and commit SHA when committed; otherwise a proposed commit message.
@@ -234,6 +256,7 @@ Examples:
 - `Add rental listings from daily search`
 - `Update rental listing details`
 - `Update rental filtering rules`
+- `Use thumbnails for listing links`
 
 Prefer one logical change per commit unless the user asks otherwise.
 
@@ -249,6 +272,6 @@ Prefer one logical change per commit unless the user asks otherwise.
 - Do not include studios, bachelor apartments, 1-room, or 1-bedroom listings.
 - Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not ignore the free-text description when structured fields are missing.
-- Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, listing dates, added dates, or Google Maps links.
+- Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, listing dates, added dates, Google Maps links, or thumbnail image URLs.
 - Do not silently change table schemas.
 - Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.
