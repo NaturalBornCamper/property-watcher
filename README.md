@@ -24,6 +24,8 @@ For now, agents should update `docs/index.html` directly when a compiled rental 
 
 ## How updates work
 
+Daily rental updates should usually start from newsletter-generated HTML pages. Listing-result URLs and individual listing pages are supported only as occasional exceptions.
+
 Daily rental updates should keep `docs/index.html` unchanged except for:
 
 1. adding newly accepted rental rows;
@@ -40,8 +42,10 @@ The current rental filters are:
 - Listing must not be a basement, semi-basement, `demi sous-sol`, or otherwise partly below-grade unit.
 - Missing size, or an obvious site default such as `1 sqft`, should be treated as unknown size instead of an automatic rejection.
 
+The compiled table uses a `Listing` column with the listing thumbnail image linked to the listing page. When available, thumbnails should come from the newsletter HTML; otherwise use the search-result card, an already-fetched detail page image, or a linked visual fallback.
+
 ## Using the skill
 
-Use `skills/rental-property-filter/SKILL.md` when analyzing listing-result URLs, listing pages, or public HTML URLs generated from rental search-alert newsletters. The skill workflow extracts listing data, follows detail pages only when needed, applies the current rental filters, and prepares reviewable `docs/index.html` updates before any GitHub commit.
+Use `skills/rental-property-filter/SKILL.md` when analyzing newsletter-generated rental alert HTML, listing pages, or rare search-result pages. The skill workflow extracts listing data and thumbnails, follows detail pages only when needed, applies the current rental filters, and updates `docs/index.html`.
 
 For detailed rules, read `AGENTS.md`.

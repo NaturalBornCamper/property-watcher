@@ -1,26 +1,28 @@
 ---
 name: rental-property-filter
-description: Filter rental property listings for the Property Watcher project. Use when the user provides rental listing-result URLs, individual listing URLs, raw listing HTML, newsletter-mirror URLs, or public search-alert HTML URLs and wants ChatGPT to extract property details from structured fields or descriptions, use safe per-domain request limits, reject listings outside H4H or H8P, reject listings with fewer than 2 rooms, reject listings under 900 square feet when real size is available, reject basement/semi-basement units, report blocked sources, and update and commit docs/index.html compiled-table changes directly unless the user explicitly asks for review-only or no-commit behavior.
+description: Filter rental property listings for the Property Watcher project. Use when the user provides newsletter-generated rental alert HTML, newsletter-mirror URLs, raw listing HTML, individual listing URLs, or rare search-result URLs and wants ChatGPT to extract property details and thumbnails from structured fields or descriptions, use safe per-domain request limits, reject listings outside H4H or H8P, reject listings with fewer than 2 rooms, reject listings under 900 square feet when real size is available, reject basement/semi-basement units, report blocked sources, and update and commit docs/index.html compiled-table changes directly unless the user explicitly asks for review-only or no-commit behavior.
 ---
 
 # Rental Property Filter
 
 Use this skill to filter rental listings for the Property Watcher repository.
 
-The repository-wide source of truth is `AGENTS.md`. Follow it for eligibility rules, request etiquette, compiled HTML output schema, sorting, blocked-source reporting, and commit expectations. This skill adds the operational workflow for rental-specific filtering.
+The repository-wide source of truth is `AGENTS.md`. Follow it for eligibility rules, request etiquette, compiled HTML output schema, thumbnail handling, sorting, blocked-source reporting, and commit expectations. This skill adds the operational workflow for rental-specific filtering.
 
 ## Expected input
 
+The user will usually provide newsletter-generated HTML from rental search alerts.
+
 The user may provide:
 
-- Listing-result page URLs already pre-filtered on rental/property websites.
-- Individual rental listing URLs.
 - Public URLs containing HTML copied from search-alert newsletters.
 - A newsletter-mirror root URL whose `index.html` lists one or more numbered files per site for the current batch (for example `centris-1.html`, `centris-2.html`); fetch and process every listed file.
-- Raw HTML copied directly into the conversation.
+- Raw newsletter/search-alert HTML copied directly into the conversation.
+- Individual rental listing URLs, as rare exceptions.
+- Listing-result page URLs already pre-filtered on rental/property websites, as rare exceptions.
 - Notes overriding a specific run, such as temporary price limits or preferred sites.
 
-Normalize each input into one or more candidate listing URLs or listing cards before filtering.
+Normalize each input into one or more candidate listing URLs, thumbnail URLs, and listing cards before filtering.
 
 ## Core output
 
@@ -28,7 +30,7 @@ For each run, provide:
 
 1. Accepted rental listings added to or updated in `docs/index.html`.
 2. Rejected listings with concise reasons when inspected.
-3. Unresolved candidates that look promising but are missing required proof, especially postal code, room count, or basement/semi-basement status.
+3. Unresolved candidates that look promising but are missing required proof, especially postal code, room count, basement/semi-basement status, or thumbnail when no source image exists.
 4. Blocked sources that could not be inspected because of CAPTCHA, bot detection, 403, 429, or access restrictions.
 5. Compiled-table rows sorted newest first.
 6. Files changed and commit SHA when committed.
@@ -39,10 +41,11 @@ Commit directly for normal filtering/update runs after best-effort validation. D
 
 Use the minimum number of requests needed to make an accurate decision.
 
-- Fetch listing-result pages or newsletter HTML first.
-- Extract all available card-level details before opening detail pages.
+- Fetch newsletter HTML first.
+- Extract all available card-level details and thumbnail images before opening detail pages.
 - Deduplicate candidate URLs before opening detail pages.
 - Open an individual listing page only when required to resolve postal code, rooms, size, floor, laundry, courtyard, address, price, date listed, basement/semi-basement status, or ambiguity.
+- Do not fetch extra detail pages solely to improve a thumbnail when the newsletter HTML already contains enough data to accept or reject the listing.
 - Allow at most one active request at a time per domain.
 - Requests to different domains may run in parallel when the tool environment supports it.
 - Wait at least 5 seconds between requests to the same domain when using a live browser or HTTP client.
@@ -55,8 +58,8 @@ Use the minimum number of requests needed to make an accurate decision.
 
 For each candidate listing:
 
-1. Record the source URL and canonical listing URL.
-2. Extract price, date listed, rooms, size, location text, postal code, address, floor, laundry, courtyard, basement/semi-basement indicators, and notes from the listing card if possible.
+1. Record the source URL, canonical listing URL, and thumbnail image URL when present.
+2. Extract price, date listed, rooms, size, location text, postal code, address, floor, laundry, courtyard, basement/semi-basement indicators, thumbnail image, and notes from the newsletter/listing card if possible.
 3. Search both structured fields and free-text descriptions for key details. Square footage, room count, floor, laundry hookups, courtyard access, postal code, address, and basement/semi-basement wording may appear only in the description.
 4. Follow the detail page only when card-level information is insufficient or suspicious.
 5. Normalize values without inventing missing facts:
@@ -94,6 +97,23 @@ Do not reject only because a listing mentions basement storage, basement parking
 
 Keep ambiguous room counts or ambiguous basement/semi-basement wording out of the accepted table and show them as unresolved unless the user has already provided a trusted interpretation rule.
 
+## Thumbnail handling
+
+The `Listing` cell must show the main thumbnail image as the clickable link to the listing.
+
+Preferred thumbnail sources, in order:
+
+1. The primary image from the newsletter-generated HTML listing card.
+2. The primary image from a user-provided search-result page listing card.
+3. The first listing photo or `og:image` from the detail page, only if the detail page is already being fetched for other required data.
+4. A linked visual fallback only when no source thumbnail is available.
+
+Preserve public source image URLs directly in the HTML. Do not download or rehost listing images unless the user explicitly asks for a separate image-mirroring workflow.
+
+Use descriptive `alt` text such as the address or `Listing thumbnail for 123 Example St`. Use `loading="lazy"` and `referrerpolicy="no-referrer"` on thumbnail images.
+
+If no source thumbnail is available, use a linked visual fallback such as a small `No image` placeholder, keep the listing link, and note `Thumbnail unavailable from source` in `NOTES` when helpful.
+
 ## Compiled table row format
 
 Draft accepted rows for the `docs/index.html` table with exactly eleven cells:
@@ -107,7 +127,7 @@ Draft accepted rows for the `docs/index.html` table with exactly eleven cells:
 7. `Floor`
 8. `Laundry`
 9. `Courtyard`
-10. `URL`
+10. `Listing`
 11. `Notes`
 
 Example row:
@@ -123,14 +143,18 @@ Example row:
   <td>2nd floor</td>
   <td>In-unit hookups</td>
   <td>Shared courtyard</td>
-  <td><a href="https://example.com/listing/123" target="listing-123">Listing</a></td>
+  <td>
+    <a href="https://example.com/listing/123" target="listing-123" class="listing-link">
+      <img src="https://example.com/photo.jpg" alt="Listing thumbnail for 123 Example St" class="listing-thumb" loading="lazy" referrerpolicy="no-referrer">
+    </a>
+  </td>
   <td>Size verified on detail page</td>
 </tr>
 ```
 
 Use `Unknown` for unavailable values.
 
-Escape HTML special characters in text cells. URL-encode map query parameters.
+Escape HTML special characters in text cells. URL-encode map query parameters. HTML-escape `&` in image and listing URLs as `&amp;`.
 
 Use a stable named `target` value for every listing and map link. Do not use `_blank`. A stable named target opens a new tab/window the first time and reuses the same tab/window when the same link is clicked again.
 
@@ -170,6 +194,7 @@ Use compact, auditable explanations:
 
 - [Listing](https://example.com/5) - location says Verdun, but no postal code or exact address found.
 - [Listing](https://example.com/6) - floor text mentions garden level, but unclear whether the unit is below grade.
+- [Listing](https://example.com/7) - accepted details are otherwise available, but no thumbnail was present in the newsletter or source page.
 
 ### Blocked
 
@@ -192,6 +217,7 @@ Before committing edits:
 8. Update blocked/unresolved notes when useful.
 9. Verify listing links and Google Maps links use stable named `target` values.
 10. Verify accepted rows do not contain basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
+11. Verify the `Listing` cell contains a linked thumbnail image or a linked visual fallback when no thumbnail exists.
 
 ## GitHub commit behavior
 
@@ -213,7 +239,7 @@ If the available GitHub tool can only write one file per commit, say so and make
 - Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not reject missing or obviously defaulted size values as under 900 sqft.
 - Do not ignore free-text descriptions when structured fields are missing.
-- Do not fabricate postal codes, addresses, sizes, floors, laundry, courtyard, listing dates, added dates, or map links.
+- Do not fabricate postal codes, addresses, sizes, floors, laundry, courtyard, listing dates, added dates, map links, or thumbnail image URLs.
 - Do not bypass bot protection or rate limits.
 - Do not stop the full run when a source is blocked; record it, continue, and report it at the end.
 - Do not run multiple simultaneous requests to the same domain.
