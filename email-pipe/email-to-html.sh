@@ -431,6 +431,17 @@ for f in "$OUTPUT_DIR/$name-"[0-9]*.html; do
     fi
 done
 
+# The same email sometimes reaches the pipe more than once (overlapping
+# cPanel filters, Exim retries); skip publishing when a byte-identical file
+# already exists in the current batch.
+for f in "$OUTPUT_DIR/$name-"[0-9]*.html; do
+    [ -e "$f" ] || continue
+    if cmp -s "$TMP_OUT" "$f"; then
+        log "duplicate: content identical to ${f##*/}, skipped (from $from_domain)"
+        exit 0
+    fi
+done
+
 DEST="$OUTPUT_DIR/$name-$((max + 1)).html"
 if ! mv -f "$TMP_OUT" "$DEST"; then
     fail "could not move HTML into place: $DEST"

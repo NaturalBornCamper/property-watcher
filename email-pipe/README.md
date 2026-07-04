@@ -88,6 +88,10 @@ filter and check `pipe.log` again.
 - **index.html** — regenerated after every email; point the AI at
   `https://alerts.yourdomain.com/` and it can discover the current batch
   without knowing how many files there are.
+- **Duplicates** — if the same email reaches the pipe twice (overlapping
+  cPanel filters can cause this; cPanel runs every matching filter, it does
+  not stop at the first match), the second copy is byte-identical to a file
+  already in the current batch and is skipped.
 - **Day boundary** — "today" comes from the server clock. If `date` in the
   cPanel Terminal is not in your timezone, uncomment `TZ` in `settings.env`
   so the counter resets at your midnight; the shared-hosting system clock
