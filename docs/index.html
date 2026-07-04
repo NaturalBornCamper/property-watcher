@@ -37,7 +37,7 @@
     table {
       border-collapse: collapse;
       width: 100%;
-      min-width: 1200px;
+      min-width: 1250px;
     }
 
     th,
@@ -52,6 +52,21 @@
       position: sticky;
       top: 0;
       background: Canvas;
+    }
+
+    .listing-link {
+      display: block;
+      width: 150px;
+    }
+
+    .listing-thumb {
+      display: block;
+      width: 150px;
+      height: 105px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
+      background: color-mix(in srgb, CanvasText 6%, transparent);
     }
 
     .empty {
@@ -87,7 +102,7 @@
               <th>Floor</th>
               <th>Laundry</th>
               <th>Courtyard</th>
-              <th>URL</th>
+              <th>Listing</th>
               <th>Notes</th>
             </tr>
           </thead>
@@ -102,7 +117,7 @@
               <td>1st floor</td>
               <td>In-unit washer/dryer</td>
               <td>Back yard; balcony</td>
-              <td><a href="https://www.zumper.com/address/655-ave-lacharite-montreal-qc-h8p-2c1-can" target="listing-zumper-655-ave-lacharite-h8p-2c1">Listing</a></td>
+              <td><a href="https://www.zumper.com/address/655-ave-lacharite-montreal-qc-h8p-2c1-can" target="listing-zumper-655-ave-lacharite-h8p-2c1" class="listing-link"><img src="https://img.zumpercdn.com/840037231/1280x960?dpr=1&amp;fit=crop&amp;h=542&amp;q=76&amp;w=991" alt="Listing thumbnail for 655 Avenue Lacharité #1" class="listing-thumb" loading="lazy" referrerpolicy="no-referrer"></a></td>
               <td>Detail page verified 2 bedrooms, 1,000 sqft, H8P, first floor, washer/dryer, back yard.</td>
             </tr>
             <tr>
@@ -115,7 +130,7 @@
               <td>Unknown</td>
               <td>On-site laundry</td>
               <td>Garden/outdoor space; balcony</td>
-              <td><a href="https://www.zumper.com/address/7779-blvd-lasalle-montreal-qc-h8p-3s9-can" target="listing-zumper-7779-blvd-lasalle-h8p-3s9">Listing</a></td>
+              <td><a href="https://www.zumper.com/address/7779-blvd-lasalle-montreal-qc-h8p-3s9-can" target="listing-zumper-7779-blvd-lasalle-h8p-3s9" class="listing-link"><img src="https://img.zumpercdn.com/890789443/1280x960?dpr=1&amp;fit=crop&amp;h=542&amp;q=76&amp;w=991" alt="Listing thumbnail for 7779 Boulevard LaSalle #416B" class="listing-thumb" loading="lazy" referrerpolicy="no-referrer"></a></td>
               <td>Detail page verified 2 bedrooms, 980 sqft, H8P, outdoor space.</td>
             </tr>
             <tr>
@@ -128,8 +143,8 @@
               <td>Unknown</td>
               <td>Unknown</td>
               <td>Unknown</td>
-              <td><a href="https://www.apartments.com/714-rue-riverview-verdun-qc/wcnjz6k/" target="listing-apartments-714-rue-riverview-h4h-2c1">Listing</a></td>
-              <td>Apartments.com result card verified H4H and 2 beds; detail page could not be fetched, size remains unknown.</td>
+              <td><a href="https://www.apartments.com/714-rue-riverview-verdun-qc/wcnjz6k/" target="listing-apartments-714-rue-riverview-h4h-2c1" class="listing-link"><img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22110%22%20viewBox%3D%220%200%20160%20110%22%3E%3Crect%20width%3D%22160%22%20height%3D%22110%22%20rx%3D%2212%22%20fill%3D%22%23e5e7eb%22%2F%3E%3Ctext%20x%3D%2280%22%20y%3D%2258%22%20font-family%3D%22Arial%2C%20sans-serif%22%20font-size%3D%2214%22%20text-anchor%3D%22middle%22%20fill%3D%22%23374151%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E" alt="Thumbnail unavailable for 714 Rue Riverview Unit 714" class="listing-thumb" loading="lazy" referrerpolicy="no-referrer"></a></td>
+              <td>Apartments.com result card verified H4H and 2 beds; detail page could not be fetched, size remains unknown. Thumbnail unavailable from source.</td>
             </tr>
             <tr>
               <td>2026-07-01</td>
@@ -141,7 +156,7 @@
               <td>2nd floor</td>
               <td>Unknown</td>
               <td>2 balconies</td>
-              <td><a href="https://www.zumper.com/apartments-for-rent/montreal-qc/lasalle" target="listing-zumper-lasalle-534-38e-avenue-h8p-3a7">Listing</a></td>
+              <td><a href="https://www.zumper.com/apartments-for-rent/montreal-qc/lasalle" target="listing-zumper-lasalle-534-38e-avenue-h8p-3a7" class="listing-link"><img src="https://img.zumpercdn.com/906546061/1280x960?fit=crop&amp;h=208&amp;w=329" alt="Listing thumbnail for 534 38e Avenue" class="listing-thumb" loading="lazy" referrerpolicy="no-referrer"></a></td>
               <td>Zumper result card verified H8P and 3 beds; detail URL was not accessible from the tool, size remains unknown.</td>
             </tr>
           </tbody>
