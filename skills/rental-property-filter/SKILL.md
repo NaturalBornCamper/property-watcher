@@ -43,7 +43,7 @@ Use the minimum number of requests needed to make an accurate decision.
 
 - Fetch newsletter HTML first.
 - Extract all available card-level details and thumbnail images before opening detail pages.
-- Deduplicate candidate URLs before opening detail pages.
+- Build the complete candidate list from all sources first, then deduplicate it (across sources and against `docs/index.html`) before opening any detail page; the same listing often appears in both a search page and a newsletter.
 - Open an individual listing page only when required to resolve postal code, rooms, size, floor, laundry, courtyard, address, price, date listed, basement/semi-basement status, or ambiguity.
 - Do not fetch extra detail pages solely to improve a thumbnail when the newsletter HTML already contains enough data to accept or reject the listing.
 - Allow at most one active request at a time per domain.
@@ -95,7 +95,7 @@ Reject listings whose dwelling unit is fully or partly below ground. French indi
 
 Do not reject only because a listing mentions basement storage, basement parking, basement locker access, or a building basement amenity. The exclusion is for the dwelling unit itself being fully or partly below ground.
 
-Keep ambiguous room counts or ambiguous basement/semi-basement wording out of the accepted table and show them as unresolved unless the user has already provided a trusted interpretation rule.
+Keep ambiguous room counts or ambiguous basement/semi-basement wording out of the accepted table and put them in the unresolved candidates table unless the user has already provided a trusted interpretation rule.
 
 ## Thumbnail handling
 
@@ -116,7 +116,7 @@ If no source thumbnail is available, use a linked visual fallback such as a smal
 
 ## Compiled table row format
 
-Draft accepted rows for the `docs/index.html` table with exactly eleven cells:
+`docs/index.html` holds two tables with the same schema: the accepted table and, below it, the unresolved candidates table for promising listings that cannot be fully filtered yet. Draft rows for either table with exactly eleven cells:
 
 1. `Date added`
 2. `Date listed`
@@ -162,7 +162,7 @@ For listing links, derive the target from the canonical listing URL or listing I
 
 For Google Maps links, derive the target from the normalized map query, such as `target="map-123-example-st-h4h-1a1"`.
 
-Sort accepted rows by `Date listed` newest first before committing updates. For equal dates, sort by `Date added` newest first. Put `Unknown` listing dates below dated listings.
+Sort rows by `Date added` newest first, then `Date listed` newest first, before committing updates. Within the same `Date added` group, put `Unknown` listing dates below dated listings.
 
 ## Location and Google Maps link handling
 
@@ -201,14 +201,16 @@ Use compact, auditable explanations:
 - `example-rentals.com` - CAPTCHA on detail pages, could not verify postal code or size.
 ```
 
+Unresolved candidates also get a row in the unresolved candidates table in `docs/index.html`, with `NOTES` stating exactly what is missing or ambiguous.
+
 Do not spend excessive effort on clearly rejected listings once the rejection reason is reliable.
 
 ## Preparing HTML changes
 
 Before committing edits:
 
-1. Check `docs/index.html` for duplicate URLs, duplicate listing IDs, and matching address/price rows.
-2. Add only accepted rows.
+1. Check both tables in `docs/index.html` for duplicate URLs, duplicate listing IDs, and matching address/price rows.
+2. Add accepted rows to the accepted table and promising-but-unresolved candidates to the unresolved candidates table below it.
 3. Update existing rows only when newly fetched details clarify unknown fields.
 4. Preserve unrelated HTML exactly.
 5. Update only the visible `Last updated` date.

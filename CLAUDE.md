@@ -17,6 +17,6 @@ Do not duplicate the full project instructions here. Keep this file limited to C
 - If a source is blocked by CAPTCHA, bot detection, 403, 429, or similar access restrictions, record it, continue with other sources, and report blocked sources at the end.
 - Check free-text listing descriptions for square footage, room count, floor, laundry, courtyard, postal code, and address details when structured fields are missing.
 - Put the main thumbnail image in the `Listing` column, linked to the listing page with a stable named `target`.
-- For normal updates to `docs/index.html`, only add or update accurate listing rows, update the visible `Last updated` date, and keep the table sorted newest first.
-- Keep unresolved or postal-code-missing candidates out of the accepted rental table unless the user explicitly approves a temporary review section.
+- For normal updates to `docs/index.html`, only add or update accurate listing rows, update the visible `Last updated` date, and keep both tables sorted by `Date added` newest first, then `Date listed` newest first.
+- Put unresolved or postal-code-missing candidates in the unresolved candidates table below the accepted table; never put them in the accepted table.
 - Do not claim GitHub changes were made unless a GitHub write action actually succeeded.

@@ -53,21 +53,24 @@ Request etiquette applies to the **target domain inside the request body**, not 
 1. Verify both environment variables exist.
 2. Fetch the newsletter-mirror root (directly or through the proxy), then fetch every file it lists through the proxy as markdown and extract the links redirecting to listing pages.
 3. Fetch each search-result page URL from the prompt through the proxy.
-4. Extract candidate listings — canonical URL, thumbnail URL, price, rooms, size, location/postal code, dates, floor/laundry/courtyard hints — and apply the eligibility rules from `AGENTS.md`.
-5. Deduplicate against `docs/index.html` and within the run before fetching any detail page.
+4. Build the complete candidate list before any listing request: extract every candidate from all sources — canonical URL, thumbnail URL, price, rooms, size, location/postal code, dates, floor/laundry/courtyard hints — into one list. Then deduplicate it: the same listing often appears in both a search page and a newsletter (normalize URLs and compare listing IDs/addresses, not just raw URLs), and drop candidates already present in `docs/index.html` (either table). Never send the same listing to the proxy twice in a run.
+5. Apply the eligibility rules from `AGENTS.md` to each unique candidate using its card data.
 6. Fetch a listing's detail page (through the proxy) only when the card leaves eligibility or a required field genuinely unresolved.
-7. Update `docs/index.html` per `AGENTS.md`: add accepted rows, clarify existing rows, update the visible `Last updated` date, keep the table sorted newest first.
-8. Verify every accepted row against the postal-code, rooms, size, and basement/semi-basement rules, then commit and push.
+7. Update `docs/index.html` per `AGENTS.md`: add accepted rows to the accepted table; add promising candidates that still cannot be fully filtered (missing postal code, no clear closed-bedroom count, ambiguous basement wording) to the unresolved candidates table below it; clarify existing rows; update the visible `Last updated` date; keep both tables sorted by `Date added` newest first, then `Date listed` newest first.
+8. Verify every accepted row against the postal-code, rooms, size, and basement/semi-basement rules, then commit and push to `main`.
 
 ## Git
 
-For a normal run, commit only `docs/index.html`, directly on the current branch, with a boring commit message such as `Add rental listings from daily search`, then push. Report the commit SHA. If the commit or push fails, say so plainly — never claim a change reached GitHub when it did not.
+For a normal run, commit only `docs/index.html`, with a boring commit message such as `Add rental listings from daily search`, and push it to the `main` branch on `origin`. GitHub deploys the live website from `main` — a commit that lands anywhere else is not deployed and the run has failed its purpose.
+
+- Never create or push to a session branch (for example `claude/...`) and never open a pull request. If the environment started you on another branch, get the change onto `main` (checkout `main` and apply or cherry-pick it) before pushing.
+- If pushing to `main` fails, report the exact error and where the commit currently sits — do not silently fall back to another branch, and never claim the change reached GitHub when it did not.
 
 ## Summary (always end the run with this)
 
 - Accepted listings added or updated (address, price, one-line reason).
 - Rejected listings with one-line reasons when they were close or ambiguous.
-- Unresolved candidates: missing postal code, ambiguous room count, ambiguous basement/semi-basement wording.
+- Unresolved candidates added to the unresolved table: missing postal code, ambiguous or missing closed-bedroom count, ambiguous basement/semi-basement wording.
 - Blocked or unreachable sources: URL, target domain, what was observed, what could not be checked.
 - Files changed, commit message, and commit SHA (or the exact failure).
 
@@ -75,7 +78,9 @@ For a normal run, commit only `docs/index.html`, directly on the current branch,
 
 - Fetch all target pages through the Proxy Page Server; the only page that may be fetched directly is the newsletter-mirror index.
 - Make no network requests other than the Proxy Page Server, the newsletter-mirror index, and git.
+- Deduplicate the complete candidate list from all sources before sending any listing request to the proxy.
+- Push to `main` only — never to a session branch, never as a pull request.
 - Never fabricate postal codes, addresses, sizes, prices, dates, or thumbnail URLs; `Unknown` is always acceptable.
-- Do not add listings outside `H4H`/`H8P`, with fewer than 2 rooms, under 900 sqft when a plausible size exists, or in a fully or partly below-grade unit.
+- Do not add listings outside `H4H`/`H8P`, with fewer than 2 rooms, under 900 sqft when a plausible size exists, or in a fully or partly below-grade unit to the accepted table; promising-but-unprovable candidates go in the unresolved table instead.
 - One blocked source never stops the run — record it, continue, report it.
 - Do not modify anything in this repository other than `docs/index.html` during a normal run.

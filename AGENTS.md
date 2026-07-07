@@ -86,7 +86,7 @@ Be conservative with requests, but use safe parallelism across different domains
 - Wait at least 5 seconds between requests to the same domain when using a live browser or HTTP client.
 - Use longer waits, around 10 seconds, when opening many individual detail pages from the same site.
 - Follow detail-page links only when the newsletter HTML, list page, or listing card does not contain enough information to decide eligibility or fill important fields.
-- Deduplicate URLs before fetching detail pages.
+- Build the complete candidate list from all sources first, then deduplicate it (across sources and against `docs/index.html`) before fetching any detail page, so the same listing is never requested twice.
 - If a site returns bot protection, CAPTCHA, 403, 429, unusual blocking behavior, or an access error, record the blocked source and continue with the next source or next domain.
 - Report blocked sources at the end with the URL, domain, observed block type, and what information could not be checked.
 - Do not attempt to bypass bot protection, paywalls, logins, rate limits, IP limits, CAPTCHA, or access controls.
@@ -127,7 +127,7 @@ Postal code handling:
 - Normalize postal codes to uppercase.
 - Accept `H4H` and `H8P` prefixes with or without a space in the full postal code.
 - Do not accept a listing only because it says Verdun, LaSalle, Montreal, or a nearby neighborhood. The postal code prefix or an exact address that can reliably establish the prefix is required.
-- If the postal code is missing after checking available details, keep the listing out of the accepted table and mention it separately as an unresolved candidate if it otherwise looks promising.
+- If the postal code is missing after checking available details, keep the listing out of the accepted table and put it in the unresolved candidates table if it otherwise looks promising.
 
 Room handling:
 
@@ -135,7 +135,7 @@ Room handling:
 - Check the free-text description for room count when structured fields are missing or ambiguous.
 - If the source uses a different room notation, preserve the source label in the table and explain the interpretation in `NOTES` when needed.
 - Reject studios, bachelor apartments, 1-room, and 1-bedroom listings.
-- Treat ambiguous room counts conservatively and keep unresolved cases out of the accepted table until clarified.
+- Treat ambiguous room counts conservatively and keep unresolved cases in the unresolved candidates table until clarified.
 
 Size handling:
 
@@ -151,7 +151,7 @@ Basement and demi-sous-sol handling:
 - Reject listings described in French as `demi sous-sol`, `demi-sous-sol`, `sous-sol`, `semi sous-sol`, `semi-sous-sol`, or `rez-de-jardin` when the context indicates a partly below-grade unit.
 - Reject listings described in English as `basement`, `basement apartment`, `semi-basement`, `semi basement`, `half-basement`, `half basement`, `partly below grade`, `partially below grade`, `below grade`, `partly underground`, `partially underground`, or `garden level` when the context indicates a partly below-grade unit.
 - Do not reject a listing only because it mentions basement storage, basement parking, basement locker access, or a building basement amenity. The exclusion is for the dwelling unit itself being fully or partly below ground.
-- If the wording is ambiguous, keep the listing out of the accepted table and mention it as unresolved rather than accepting it.
+- If the wording is ambiguous, keep the listing out of the accepted table and put it in the unresolved candidates table rather than accepting it.
 
 ## Thumbnail handling
 
@@ -174,9 +174,9 @@ If no source thumbnail is available, use a linked visual fallback such as a smal
 
 ## Compiled HTML table schema
 
-`docs/index.html` contains the accepted rental table.
+`docs/index.html` contains the accepted rental table and, below it, a separate unresolved candidates table.
 
-The table must include these columns, in this order:
+Both tables must include these columns, in this order:
 
 1. `Date added`
 2. `Date listed`
@@ -190,7 +190,7 @@ The table must include these columns, in this order:
 10. `Listing`
 11. `Notes`
 
-Each accepted listing row must have exactly eleven cells.
+Each listing row in either table must have exactly eleven cells.
 
 Use short cell values. Escape HTML special characters in user-visible text.
 
@@ -214,13 +214,26 @@ If no useful location information exists, use `Unknown` as plain text.
 
 Use `Unknown` for unavailable values.
 
+## Unresolved candidates table
+
+Below the accepted table, `docs/index.html` keeps a second table for unresolved candidates: listings that look promising but cannot be fully filtered yet — usually a missing postal code, no clear (closed) bedroom count, or ambiguous basement/semi-basement wording.
+
+- Same eleven columns as the accepted table, with `Unknown` for missing values.
+- `NOTES` must state exactly what is missing or ambiguous, for example `No postal code in listing` or `Bedroom count unclear`.
+- Only plausible candidates belong here. Listings that positively fail a filter (wrong postal prefix, under 900 sqft with a real size, 1 bedroom or fewer, below-grade unit) are rejected, not unresolved.
+- When later information resolves a row, move it to the accepted table preserving its original `Date added`, or remove it if it now fails a filter.
+- Keep this table sorted the same way as the accepted table.
+- When the table has no rows, keep the single placeholder row `<tr><td colspan="11" class="empty">No unresolved candidates.</td></tr>`; remove it when adding the first real row and restore it if the table empties again.
+
 ## Sorting and deduplication
 
-Keep the accepted-listings table sorted by `Date listed` newest first.
+Keep both listings tables sorted by `Date added` newest first, then by `Date listed` newest first.
 
-When listing dates are equal, sort by `Date added` newest first. Put `Unknown` listing dates below dated listings unless the user explicitly asks for another behavior.
+Within the same `Date added` group, put `Unknown` listing dates below dated listings unless the user explicitly asks for another behavior.
 
-Deduplicate before adding rows. Treat listings as likely duplicates when they share any of these:
+Build the complete candidate list from all sources (newsletter files and search pages) and deduplicate it before fetching any listing page — the same listing often appears in more than one source. Never fetch the same listing URL twice in a run.
+
+Deduplicate before adding rows, checking both the accepted table and the unresolved candidates table. Treat listings as likely duplicates when they share any of these:
 
 - same canonical URL;
 - same listing ID;
@@ -236,10 +249,11 @@ For a normal rental update, preserve the file as-is except for the specific upda
 Only change:
 
 1. Add newly accepted listing rows.
-2. Update existing rows when newly fetched details clarify unknown fields.
-3. Update the visible `Last updated` date.
-4. Re-sort the accepted-listings table newest first.
-5. Update the blocked/unresolved notes section when useful.
+2. Add or update rows in the unresolved candidates table, and move rows to the accepted table when new details resolve them.
+3. Update existing rows when newly fetched details clarify unknown fields.
+4. Update the visible `Last updated` date.
+5. Re-sort both tables by `Date added` newest first, then `Date listed` newest first.
+6. Update the blocked/unresolved notes section when useful.
 
 Do not rewrite unrelated rows, change the schema, or perform opportunistic cleanup unless the user explicitly asks.
 
@@ -248,6 +262,8 @@ Before final output or commit, verify that every accepted row satisfies postal-c
 ## Commit behavior
 
 Automatic commits are limited to `docs/index.html`. For normal rental filtering/update runs — especially the scheduled routine — update `docs/index.html` and commit it directly after best-effort validation, without asking for confirmation unless the user explicitly requests review-only or no-commit behavior.
+
+Routine commits of `docs/index.html` must be pushed to the `main` branch: GitHub deploys the live website from `main`, so output left on a session branch (for example `claude/...`) or in a pull request is not deployed. Never push routine output anywhere other than `main`.
 
 For every other file (`AGENTS.md`, `CLAUDE.md`, skills, routines, scripts), do not commit automatically. When instructions or workflow defaults change, update `AGENTS.md` and the affected skill/routine files directly, then present the changes for review with a proposed commit message and let the user commit manually.
 
