@@ -60,7 +60,7 @@ The email-pipe mirror publishes each alert email as a numbered file per sender d
 Listing sites and newsletter mirrors often use long tracking URLs that assistants refuse to open, or serve heavy HTML. The user runs a Proxy Page Server that fetches a target page and returns its content as markdown, text, or HTML.
 
 - Configuration comes from environment variables: `PROXY_PAGE_SERVER_URL` (endpoint) and `PROXY_PAGE_SERVER_API_KEY` (sent as header `X-API-Key`). Never store the endpoint or key in this repository.
-- Fetch a page with a POST to the endpoint, headers `X-API-Key`, `Content-Type: application/json`, and a normal browser `User-Agent` (Cloudflare may block empty or tool-like agents), and this JSON body:
+- Fetch a page with a POST to the endpoint, headers `X-API-Key`, `Content-Type: application/json` (describes the request body being sent; the response is the page content in the requested format, not JSON), and a normal browser `User-Agent` (Cloudflare may block empty or tool-like agents), and this JSON body:
 
 ```json
 {
@@ -70,8 +70,8 @@ Listing sites and newsletter mirrors often use long tracking URLs that assistant
 }
 ```
 
-- Prefer `"markdown"` output. Re-request a single page as `"html"` only when the markdown is missing something the page should have, such as thumbnail image URLs. Retry once with `"dom_unchanged_ms": 2000` when a page returns clearly incomplete client-rendered content.
-- Scheduled routine runs must fetch all target pages through the proxy. Interactive runs should use it whenever both environment variables are set.
+- Prefer `"markdown"` output. Re-request a single page as `"html"` only when the markdown is missing something the page should have, such as thumbnail image URLs. Retry once with `"dom_unchanged_ms": 500` when a page returns clearly incomplete client-rendered content.
+- Scheduled routine runs must fetch all target pages through the proxy; the one allowed exception is the newsletter-mirror index, which is light HTML and may be fetched directly. Interactive runs should use the proxy whenever both environment variables are set.
 - When fetching through the proxy, apply all per-domain request-etiquette rules below to the target domain inside the request body, not to the proxy's own domain.
 - A block from the proxy itself (401/403, Cloudflare) and a target-site block passed through the proxy are both blocked sources: record them, continue, and report them at the end.
 
@@ -247,9 +247,9 @@ Before final output or commit, verify that every accepted row satisfies postal-c
 
 ## Commit behavior
 
-For normal rental filtering/update requests, update `docs/index.html` and commit directly after best-effort validation. Do not ask for a separate commit confirmation unless the user explicitly says to review first, draft only, do not commit, or otherwise asks for approval before writing.
+Automatic commits are limited to `docs/index.html`. For normal rental filtering/update runs — especially the scheduled routine — update `docs/index.html` and commit it directly after best-effort validation, without asking for confirmation unless the user explicitly requests review-only or no-commit behavior.
 
-When instructions or workflow defaults change, update `AGENTS.md` and the active skill file directly and commit those changes as part of the same task when possible.
+For every other file (`AGENTS.md`, `CLAUDE.md`, skills, routines, scripts), do not commit automatically. When instructions or workflow defaults change, update `AGENTS.md` and the affected skill/routine files directly, then present the changes for review with a proposed commit message and let the user commit manually.
 
 If the available GitHub tool writes one file per commit, make sequential commits and report each commit SHA.
 

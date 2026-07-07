@@ -9,7 +9,7 @@ Follow `AGENTS.md` for every filtering decision: rental eligibility rules, share
 The scheduled prompt provides the run's sources, of two kinds:
 
 - **Search-result page URLs** — apartment search results for LaSalle and Verdun on listing sites.
-- **A newsletter-mirror root URL** — fetch it first: its `index.html` lists the currently published batch as numbered files per sender domain (for example `centris-1.html`, `centris-2.html`). Process every file listed for the current batch. Ignore `archive/`.
+- **A newsletter-mirror root URL** — an auto-generated index of today's latest saved-search newsletter emails, as numbered files per sender domain (for example `centris-1.html`, `centris-2.html`). Read it as-is and process every file it lists, extracting the links that redirect to listing pages. The index itself is light HTML and may be fetched directly; the listed newsletter files can be heavy, so fetch those through the proxy as markdown.
 
 If the prompt provides no URLs, stop and report that instead of guessing sources.
 
@@ -22,7 +22,7 @@ If either is missing, stop immediately and report it — do not fetch target pag
 
 ## Fetching pages — always through the Proxy Page Server
 
-Never fetch listing sites, search pages, or the newsletter mirror directly (no WebFetch, no curl to the target). Every page fetch is a POST to `$PROXY_PAGE_SERVER_URL`; the proxy fetches the target page and returns its content.
+Never fetch listing sites, search pages, or newsletter files directly (no WebFetch, no curl to the target) — the one exception is the newsletter-mirror index, which is light HTML and may be fetched directly. Every other page fetch is a POST to `$PROXY_PAGE_SERVER_URL`; the proxy fetches the target page and returns its content.
 
 ```sh
 curl -sS -X POST "$PROXY_PAGE_SERVER_URL" \
@@ -32,9 +32,10 @@ curl -sS -X POST "$PROXY_PAGE_SERVER_URL" \
   -d '{"url": "<target page URL>", "dom_unchanged_ms": 0, "output_format": "markdown"}'
 ```
 
+- The `Content-Type: application/json` header describes the request body you send. The response is not JSON — it is the page content itself in the requested format.
 - Default `output_format` is `"markdown"` — analyze that instead of raw HTML.
 - If the markdown for a page is missing something the page should have (usually thumbnail image URLs or listing links), re-request that one page with `"output_format": "html"`.
-- If a page comes back clearly incomplete (a search page with an empty result area, an empty body), retry once with `"dom_unchanged_ms": 2000` to let client-side rendering finish, then move on.
+- If a page comes back clearly incomplete (a search page with an empty result area, an empty body), retry once with `"dom_unchanged_ms": 500` to let client-side rendering finish, then move on.
 - Always send a normal browser `User-Agent` string; Cloudflare in front of the proxy may block empty or tool-like agents. If Cloudflare still blocks the request, record it and report it — the user will fix the Cloudflare rule.
 
 ### Errors and etiquette
@@ -50,7 +51,7 @@ Request etiquette applies to the **target domain inside the request body**, not 
 ## Procedure
 
 1. Verify both environment variables exist.
-2. Fetch the newsletter-mirror root through the proxy, then every current-batch file its index lists.
+2. Fetch the newsletter-mirror root (directly or through the proxy), then fetch every file it lists through the proxy as markdown and extract the links redirecting to listing pages.
 3. Fetch each search-result page URL from the prompt through the proxy.
 4. Extract candidate listings — canonical URL, thumbnail URL, price, rooms, size, location/postal code, dates, floor/laundry/courtyard hints — and apply the eligibility rules from `AGENTS.md`.
 5. Deduplicate against `docs/index.html` and within the run before fetching any detail page.
@@ -72,8 +73,8 @@ For a normal run, commit only `docs/index.html`, directly on the current branch,
 
 ## Hard rules
 
-- Never fetch a target page directly — Proxy Page Server only.
-- Make no network requests other than the Proxy Page Server and git.
+- Fetch all target pages through the Proxy Page Server; the only page that may be fetched directly is the newsletter-mirror index.
+- Make no network requests other than the Proxy Page Server, the newsletter-mirror index, and git.
 - Never fabricate postal codes, addresses, sizes, prices, dates, or thumbnail URLs; `Unknown` is always acceptable.
 - Do not add listings outside `H4H`/`H8P`, with fewer than 2 rooms, under 900 sqft when a plausible size exists, or in a fully or partly below-grade unit.
 - One blocked source never stops the run — record it, continue, report it.
