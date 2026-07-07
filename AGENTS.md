@@ -15,7 +15,8 @@ Primary files:
 - `docs/index.html` - compiled rental-listings output and current canonical accepted-listings file.
 - `AGENTS.md` - project instructions and source of truth for agents.
 - `CLAUDE.md` - Claude-specific entry point that should reference this file instead of duplicating these rules.
-- `skills/rental-property-filter/SKILL.md` - current ChatGPT Skill for rental property filtering.
+- `skills/rental-property-filter/SKILL.md` - ChatGPT Skill for rental property filtering (ChatGPT/manual runs).
+- `routines/rental-watch.md` - scheduled Claude routine for unattended rental filtering runs; the prompt stored in Claude Routines only points here and supplies the source URLs.
 - `email-pipe/` - cPanel email-pipe scripts that publish search-alert newsletter emails as public HTML mirror pages (see `email-pipe/README.md`).
 
 Future supporting files may include more property-type outputs, skills, scripts, notes, templates, or deployment workflows. Keep this file as the repository-wide source of truth when rules overlap.
@@ -53,6 +54,26 @@ Supported inputs, in preferred order:
 For newsletter HTML, extract listing URLs, thumbnail image URLs, listing cards, prices, dates, and summary details from the HTML before deciding whether to fetch detail pages.
 
 The email-pipe mirror publishes each alert email as a numbered file per sender domain and day (for example `centris-1.html`, `centris-2.html`), because alert sites send one email per saved search. The mirror root serves an auto-generated `index.html` listing the currently published files, and an `archive/` folder holds previous days. When given the mirror root URL, read `index.html` and process every listed file.
+
+## Proxy Page Server
+
+Listing sites and newsletter mirrors often use long tracking URLs that assistants refuse to open, or serve heavy HTML. The user runs a Proxy Page Server that fetches a target page and returns its content as markdown, text, or HTML.
+
+- Configuration comes from environment variables: `PROXY_PAGE_SERVER_URL` (endpoint) and `PROXY_PAGE_SERVER_API_KEY` (sent as header `X-API-Key`). Never store the endpoint or key in this repository.
+- Fetch a page with a POST to the endpoint, headers `X-API-Key`, `Content-Type: application/json`, and a normal browser `User-Agent` (Cloudflare may block empty or tool-like agents), and this JSON body:
+
+```json
+{
+  "url": "<target page URL>",
+  "dom_unchanged_ms": 0,
+  "output_format": "markdown"
+}
+```
+
+- Prefer `"markdown"` output. Re-request a single page as `"html"` only when the markdown is missing something the page should have, such as thumbnail image URLs. Retry once with `"dom_unchanged_ms": 2000` when a page returns clearly incomplete client-rendered content.
+- Scheduled routine runs must fetch all target pages through the proxy. Interactive runs should use it whenever both environment variables are set.
+- When fetching through the proxy, apply all per-domain request-etiquette rules below to the target domain inside the request body, not to the proxy's own domain.
+- A block from the proxy itself (401/403, Cloudflare) and a target-site block passed through the proxy are both blocked sources: record them, continue, and report them at the end.
 
 ## Request etiquette, concurrency, and blocked sources
 
