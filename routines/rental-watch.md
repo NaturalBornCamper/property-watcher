@@ -40,6 +40,20 @@ Always dump response headers (`-D`) and check `proxy-fetcher-blocked-suspected` 
 - If a page comes back clearly incomplete (a search page with an empty result area, an empty body), retry once with `"dom_unchanged_ms": 500` to let client-side rendering finish, then move on.
 - Always send a normal browser `User-Agent` string; Cloudflare in front of the proxy may block empty or tool-like agents. If Cloudflare still blocks the request, record it and report it — the user will fix the Cloudflare rule.
 
+### Postal-code geocoding
+
+When a candidate has an exact street address (street number + street name + borough/city) but no postal code, resolve the postal code from the address before treating it as missing. This uses the Nominatim search API, a light JSON API that may be fetched directly (like the mirror index), not through the proxy:
+
+```sh
+curl -sS "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=ca&limit=1&q=<URL-encoded address>" \
+  -H "User-Agent: PropertyWatcher/1.0 (personal rental filter)"
+```
+
+- Use the returned `postcode` only when the match corresponds to the same street number and street; a street- or city-level match resolves nothing.
+- Note `Postal code resolved from address` in the row's Notes.
+- One lookup per address, at least 1 second apart, only for candidates that actually need it.
+- If the lookup fails or is ambiguous, the candidate stays unresolved — never guess a postal code.
+
 ### Errors and etiquette
 
 Request etiquette applies to the **target domain inside the request body**, not to the proxy's own domain:
@@ -56,11 +70,12 @@ Request etiquette applies to the **target domain inside the request body**, not 
 1. Verify both environment variables exist.
 2. Fetch the newsletter-mirror root (directly or through the proxy), then fetch every file it lists through the proxy as markdown and extract the links redirecting to listing pages.
 3. Fetch each search-result page URL from the prompt through the proxy.
-4. Build the complete candidate list before any listing request: extract every candidate from all sources — canonical URL, thumbnail URL, price, rooms, size, location/postal code, dates, floor/laundry/courtyard hints — into one list. Then deduplicate it: the same listing often appears in both a search page and a newsletter (normalize URLs and compare listing IDs/addresses, not just raw URLs), and drop candidates already present in `docs/index.html` (either table). Never send the same listing to the proxy twice in a run.
+4. Build the complete candidate list before any listing request: extract every candidate from all sources — canonical URL, thumbnail URL, price, rooms, size, location/postal code, dates, floor/laundry/courtyard/year-built hints — into one list. Then deduplicate it: the same listing often appears in both a search page and a newsletter (normalize URLs and compare listing IDs/addresses, not just raw URLs), and drop candidates already present in `docs/index.html` (either table). Never send the same listing to the proxy twice in a run.
 5. Apply the eligibility rules from `AGENTS.md` to each unique candidate using its card data.
-6. Fetch a listing's detail page (through the proxy) only when the card leaves eligibility or a required field genuinely unresolved.
-7. Update `docs/index.html` per `AGENTS.md`: add accepted rows to the accepted table; add promising candidates that still cannot be fully filtered (missing postal code, no clear closed-bedroom count, ambiguous basement wording) to the unresolved candidates table below it; clarify existing rows; update the visible `Last updated` date; keep both tables sorted by `Date added` newest first, then `Date listed` newest first.
-8. Verify every accepted row against the postal-code, rooms, size, and basement/semi-basement rules, then commit and push to `main`.
+6. For candidates that would pass every filter except a missing postal code and that have an exact street address, resolve the postal code with the geocoding lookup above before consigning them to the unresolved table.
+7. Fetch a listing's detail page (through the proxy) only when the card leaves eligibility or a required field genuinely unresolved.
+8. Update `docs/index.html` per `AGENTS.md`: add accepted rows to the accepted table; add promising candidates that still cannot be fully filtered (missing postal code, no clear closed-bedroom count, ambiguous basement wording) to the unresolved candidates table below it; clarify existing rows; update the visible `Last updated` date; keep both tables sorted by `Date added` newest first, then `Date listed` newest first.
+9. Verify every accepted row against the postal-code, rooms, size, and basement/semi-basement rules, then commit and push to `main`.
 
 ## Git
 
@@ -79,8 +94,8 @@ For a normal run, commit only `docs/index.html`, with a boring commit message su
 
 ## Hard rules
 
-- Fetch all target pages through the Proxy Page Server; the only page that may be fetched directly is the newsletter-mirror index.
-- Make no network requests other than the Proxy Page Server, the newsletter-mirror index, and git.
+- Fetch all target pages through the Proxy Page Server; the only fetches allowed to skip the proxy are the newsletter-mirror index and the Nominatim postal-code geocoding lookup.
+- Make no network requests other than the Proxy Page Server, the newsletter-mirror index, the Nominatim geocoding lookup, and git.
 - Deduplicate the complete candidate list from all sources before sending any listing request to the proxy.
 - Push to `main` only — never to a session branch, never as a pull request.
 - Never fabricate postal codes, addresses, sizes, prices, dates, or thumbnail URLs; `Unknown` is always acceptable.

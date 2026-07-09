@@ -93,6 +93,7 @@ Be conservative with requests, but use safe parallelism across different domains
 - Do not attempt to bypass bot protection, paywalls, logins, rate limits, IP limits, CAPTCHA, or access controls.
 - Do not use multiple IPs, proxy rotation, credential stuffing, or browser fingerprint evasion.
 - Prefer public pages and the user's public newsletter mirror URLs.
+- Geocoding lookups (Nominatim) follow the same per-domain etiquette: at most one request at a time, at least 1 second between requests, a descriptive `User-Agent`, and only for addresses that actually need postal-code resolution. The lookup is a light JSON API and may be fetched directly, without the Proxy Page Server.
 
 The purpose is personal filtering, not bulk scraping.
 
@@ -109,8 +110,9 @@ Extract these fields whenever available. Information may appear in structured li
 7. `FLOOR` - floor, level, basement, ground floor, elevator context, or unknown.
 8. `LAUNDRY` - in-unit hookups, washer/dryer, shared laundry, none, or unknown.
 9. `COURTYARD` - courtyard, yard, shared yard, balcony/patio only, none, or unknown.
-10. `LISTING` - main listing thumbnail image linked to the canonical listing URL.
-11. `NOTES` - concise uncertainty notes or source-specific caveats.
+10. `YEAR BUILT` - building construction year (or date, when the source gives one), from structured fields or the free-text description.
+11. `LISTING` - main listing thumbnail image linked to the canonical listing URL.
+12. `NOTES` - concise uncertainty notes or source-specific caveats.
 
 Do not fabricate missing fields. Use `Unknown` when a field cannot be found after reasonable inspection.
 
@@ -128,7 +130,10 @@ Postal code handling:
 - Normalize postal codes to uppercase.
 - Accept `H4H` and `H8P` prefixes with or without a space in the full postal code.
 - Do not accept a listing only because it says Verdun, LaSalle, Montreal, or a nearby neighborhood. The postal code prefix or an exact address that can reliably establish the prefix is required.
-- If the postal code is missing after checking available details, keep the listing out of the accepted table and put it in the unresolved candidates table if it otherwise looks promising.
+- When the source gives an exact street address (street number + street name + borough/city) but no postal code, resolve the postal code from the address with a geocoding lookup before treating it as missing. Use the Nominatim search API (`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=ca&limit=1&q=<URL-encoded address>`) with a descriptive `User-Agent`, and use the returned `postcode` only when the match corresponds to the same street number and street. Note `Postal code resolved from address` in `NOTES` so the derivation is auditable.
+- A postal code resolved by geocoding an exact address is a lookup, not fabrication. Guessing a postal code without a lookup remains fabrication and is forbidden.
+- If the geocoding lookup fails, is ambiguous, or returns only a street- or city-level match, keep the listing out of the accepted table and treat the postal code as still missing.
+- If the postal code is missing after checking available details (including the geocoding lookup when an exact address exists), keep the listing out of the accepted table and put it in the unresolved candidates table if it otherwise looks promising.
 
 Room handling:
 
@@ -188,10 +193,11 @@ Both tables must include these columns, in this order:
 7. `Floor`
 8. `Laundry`
 9. `Courtyard`
-10. `Listing`
-11. `Notes`
+10. `Year built`
+11. `Listing`
+12. `Notes`
 
-Each listing row in either table must have exactly eleven cells.
+Each listing row in either table must have exactly twelve cells. Use the construction year (for example `1962`) in `Year built`, or `Unknown` when the source does not state it.
 
 Use short cell values. Escape HTML special characters in user-visible text.
 
@@ -219,12 +225,12 @@ Use `Unknown` for unavailable values.
 
 Below the accepted table, `docs/index.html` keeps a second table for unresolved candidates: listings that look promising but cannot be fully filtered yet — usually a missing postal code, no clear (closed) bedroom count, or ambiguous basement/semi-basement wording.
 
-- Same eleven columns as the accepted table, with `Unknown` for missing values.
+- Same twelve columns as the accepted table, with `Unknown` for missing values.
 - `NOTES` must state exactly what is missing or ambiguous, for example `No postal code in listing` or `Bedroom count unclear`.
 - Only plausible candidates belong here. Listings that positively fail a filter (wrong postal prefix, under 900 sqft with a real size, 1 bedroom or fewer, below-grade unit) are rejected, not unresolved.
 - When later information resolves a row, move it to the accepted table preserving its original `Date added`, or remove it if it now fails a filter.
 - Keep this table sorted the same way as the accepted table.
-- When the table has no rows, keep the single placeholder row `<tr><td colspan="11" class="empty">No unresolved candidates.</td></tr>`; remove it when adding the first real row and restore it if the table empties again.
+- When the table has no rows, keep the single placeholder row `<tr><td colspan="12" class="empty">No unresolved candidates.</td></tr>`; remove it when adding the first real row and restore it if the table empties again.
 
 ## Sorting and deduplication
 
@@ -310,6 +316,6 @@ Prefer one logical change per commit unless the user asks otherwise.
 - Do not include studios, bachelor apartments, 1-room, or 1-bedroom listings.
 - Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not ignore the free-text description when structured fields are missing.
-- Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, listing dates, added dates, Google Maps links, or thumbnail image URLs.
+- Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, construction years, listing dates, added dates, Google Maps links, or thumbnail image URLs.
 - Do not silently change table schemas.
 - Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.

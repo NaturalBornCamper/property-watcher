@@ -59,7 +59,7 @@ Use the minimum number of requests needed to make an accurate decision.
 For each candidate listing:
 
 1. Record the source URL, canonical listing URL, and thumbnail image URL when present.
-2. Extract price, date listed, rooms, size, location text, postal code, address, floor, laundry, courtyard, basement/semi-basement indicators, thumbnail image, and notes from the newsletter/listing card if possible.
+2. Extract price, date listed, rooms, size, location text, postal code, address, floor, laundry, courtyard, year built, basement/semi-basement indicators, thumbnail image, and notes from the newsletter/listing card if possible.
 3. Search both structured fields and free-text descriptions for key details. Square footage, room count, floor, laundry hookups, courtyard access, postal code, address, and basement/semi-basement wording may appear only in the description.
 4. Follow the detail page only when card-level information is insufficient or suspicious.
 5. Normalize values without inventing missing facts:
@@ -69,6 +69,7 @@ For each candidate listing:
    - Size as sqft, or `Unknown` when missing.
    - Impossible sizes such as `1 sqft`, `0 sqft`, blank, or impossible tiny sizes as `Unknown`.
    - Dates as `YYYY-MM-DD` when possible, with `Unknown` when not recoverable.
+   - Year built as a 4-digit construction year when the source states one, or `Unknown`.
 6. Apply the rental eligibility rules.
 7. Update `docs/index.html` with accepted rows and useful run notes.
 8. Commit the changed file directly unless the user explicitly requested review-only or no-commit behavior.
@@ -83,7 +84,7 @@ Accept a listing only when all these conditions are satisfied:
 3. Listing has at least 900 sqft when a plausible real size is available.
 4. Listing is not a basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling unit.
 
-Do not accept listings with missing postal code unless an exact address or official detail page reliably establishes the postal prefix.
+Do not accept listings with missing postal code unless an exact address or official detail page reliably establishes the postal prefix. When a listing gives an exact street address but no postal code, resolve the postal code from the address with a geocoding lookup (Nominatim search with `addressdetails=1`; see `AGENTS.md`) before treating it as missing, use the result only when it matches the same street number and street, and note `Postal code resolved from address` in `NOTES`.
 
 Do not reject solely for missing size or obvious platform default size. Treat values such as `1 sqft`, `0 sqft`, blank, or impossible tiny sizes as `Unknown`.
 
@@ -116,7 +117,7 @@ If no source thumbnail is available, use a linked visual fallback such as a smal
 
 ## Compiled table row format
 
-`docs/index.html` holds two tables with the same schema: the accepted table and, below it, the unresolved candidates table for promising listings that cannot be fully filtered yet. Draft rows for either table with exactly eleven cells:
+`docs/index.html` holds two tables with the same schema: the accepted table and, below it, the unresolved candidates table for promising listings that cannot be fully filtered yet. Draft rows for either table with exactly twelve cells:
 
 1. `Date added`
 2. `Date listed`
@@ -127,8 +128,9 @@ If no source thumbnail is available, use a linked visual fallback such as a smal
 7. `Floor`
 8. `Laundry`
 9. `Courtyard`
-10. `Listing`
-11. `Notes`
+10. `Year built`
+11. `Listing`
+12. `Notes`
 
 Example row:
 
@@ -143,6 +145,7 @@ Example row:
   <td>2nd floor</td>
   <td>In-unit hookups</td>
   <td>Shared courtyard</td>
+  <td>1962</td>
   <td>
     <a href="https://example.com/listing/123" target="listing-123" class="listing-link">
       <img src="https://example.com/photo.jpg" alt="Listing thumbnail for 123 Example St" class="listing-thumb" loading="lazy" referrerpolicy="no-referrer">
@@ -241,7 +244,7 @@ If the available GitHub tool can only write one file per commit, say so and make
 - Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not reject missing or obviously defaulted size values as under 900 sqft.
 - Do not ignore free-text descriptions when structured fields are missing.
-- Do not fabricate postal codes, addresses, sizes, floors, laundry, courtyard, listing dates, added dates, map links, or thumbnail image URLs.
+- Do not fabricate postal codes, addresses, sizes, floors, laundry, courtyard, construction years, listing dates, added dates, map links, or thumbnail image URLs. A postal code resolved by geocoding an exact address is a lookup, not fabrication.
 - Do not bypass bot protection or rate limits.
 - Do not stop the full run when a source is blocked; record it, continue, and report it at the end.
 - Do not run multiple simultaneous requests to the same domain.
