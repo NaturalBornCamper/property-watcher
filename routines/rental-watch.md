@@ -25,12 +25,14 @@ If either is missing, stop immediately and report it — do not fetch target pag
 Never fetch listing sites, search pages, or newsletter files directly (no WebFetch, no curl to the target) — the one exception is the newsletter-mirror index, which is light HTML and may be fetched directly. Every other page fetch is a POST to `$PROXY_PAGE_SERVER_URL`; the proxy fetches the target page and returns its content.
 
 ```sh
-curl -sS -X POST "$PROXY_PAGE_SERVER_URL" \
+curl -sS -D /tmp/headers.txt -o /tmp/page.md -X POST "$PROXY_PAGE_SERVER_URL" \
   -H "X-API-Key: $PROXY_PAGE_SERVER_API_KEY" \
   -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36" \
   -H "Content-Type: application/json" \
   -d '{"url": "<target page URL>", "dom_unchanged_ms": 0, "output_format": "markdown"}'
 ```
+
+Always dump response headers (`-D`) and check `proxy-fetcher-blocked-suspected` before using the body. Write both files to a temp directory outside the repository (such as `/tmp`), one pair per fetch; these are ephemeral run files and must never be committed.
 
 - The `Content-Type: application/json` header describes the request body you send. The response is not JSON — it is the page content itself in the requested format.
 - Default `output_format` is `"markdown"` — analyze that instead of raw HTML.
@@ -46,6 +48,7 @@ Request etiquette applies to the **target domain inside the request body**, not 
 - Wait at least 5 seconds between requests to the same target domain, about 10 seconds when opening many detail pages from one site.
 - Proxy network error or 5xx: retry once after 30 seconds, then record the URL as unreachable and continue.
 - 401/403 from the proxy itself: the key or Cloudflare is rejecting you; stop further proxy attempts, record every unfetched source as blocked, and report it prominently.
+- Response header `proxy-fetcher-blocked-suspected: true`: the proxy suspects the target hit bot protection — the page is invalid even if the body looks plausible. Do not extract data from it; record the source as blocked and continue.
 - Target-site blocks passed through by the proxy (CAPTCHA page, bot wall, 403/429 content): record the blocked source and continue with the next one. Never attempt to bypass.
 
 ## Procedure

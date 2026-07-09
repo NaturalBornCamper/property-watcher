@@ -71,6 +71,7 @@ Listing sites and newsletter mirrors often use long tracking URLs that assistant
 ```
 
 - Prefer `"markdown"` output. Re-request a single page as `"html"` only when the markdown is missing something the page should have, such as thumbnail image URLs. Retry once with `"dom_unchanged_ms": 500` when a page returns clearly incomplete client-rendered content.
+- Every proxy response includes the response header `proxy-fetcher-blocked-suspected` (boolean). Always capture and check response headers (for example with curl `-D`). When the header is `true`, the proxy suspects the target page hit bot protection or a similar block: treat the returned content as invalid, do not extract listing data from it, record the source as blocked, and report it at the end.
 - Scheduled routine runs must fetch all target pages through the proxy; the one allowed exception is the newsletter-mirror index, which is light HTML and may be fetched directly. Interactive runs should use the proxy whenever both environment variables are set.
 - When fetching through the proxy, apply all per-domain request-etiquette rules below to the target domain inside the request body, not to the proxy's own domain.
 - A block from the proxy itself (401/403, Cloudflare) and a target-site block passed through the proxy are both blocked sources: record them, continue, and report them at the end.
