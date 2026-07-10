@@ -11,7 +11,7 @@ Do not duplicate the full project instructions here. Keep this file limited to C
 - Follow `AGENTS.md` unless this file later adds a more specific Claude-only instruction.
 - Scheduled runs (Claude Routines) follow `routines/rental-watch.md`; the stored routine prompt only points there and supplies the source URLs.
 - Fetch target pages through the Proxy Page Server (see `AGENTS.md`) whenever `PROXY_PAGE_SERVER_URL` and `PROXY_PAGE_SERVER_API_KEY` are set; this is mandatory in scheduled runs.
-- Prefer newsletter-generated HTML as the normal intake source; listing pages and search-result pages are rare exceptions.
+- Prefer newsletter-generated HTML as the normal intake source; user-provided listing pages and search-result pages are rare exceptions. This is about intake only — during a run, always fetch the detail page (and linked broker sheet) of every candidate headed to either table, per `AGENTS.md`.
 - Keep request volume low and do not bypass bot protection.
 - Use at most one active request per domain, but allow safe parallel requests across different domains when supported.
 - If a source is blocked by CAPTCHA, bot detection, 403, 429, or similar access restrictions, record it, continue with other sources, and report blocked sources at the end.

@@ -39,13 +39,15 @@ Commit directly for normal filtering/update runs after best-effort validation. D
 
 ## Request etiquette
 
-Use the minimum number of requests needed to make an accurate decision.
+Use the minimum number of requests that still fills the table completely: reject from card data when possible, but the detail page is mandatory for every listing that gets a table row.
 
 - Fetch newsletter HTML first.
 - Extract all available card-level details and thumbnail images before opening detail pages.
 - Build the complete candidate list from all sources first, then deduplicate it (across sources and against `docs/index.html`) before opening any detail page; the same listing often appears in both a search page and a newsletter.
-- Open an individual listing page only when required to resolve postal code, rooms, size, floor, laundry, courtyard, address, price, date listed, basement/semi-basement status, or ambiguity.
-- Do not fetch extra detail pages solely to improve a thumbnail when the newsletter HTML already contains enough data to accept or reject the listing.
+- Always open the detail page of every candidate that survives card-level rejection — even when the card already shows postal code, rooms, and price. The detail page is the source for size, floor, laundry, courtyard, year built, exact address, date listed, and the free-text description.
+- When the detail page links to a fuller external broker sheet (for example Centris's `See detailed sheet` link to the broker's own website), follow that link too and merge its details — posters often leave most of the information on the broker page. Per-domain etiquette applies to the broker's domain like any other.
+- Skip a detail page only when the card data already proves rejection.
+- Do not fetch a detail page solely to improve a thumbnail for a listing the card data already rejects.
 - Allow at most one active request at a time per domain.
 - Requests to different domains may run in parallel when the tool environment supports it.
 - Wait at least 5 seconds between requests to the same domain when using a live browser or HTTP client.
@@ -61,7 +63,7 @@ For each candidate listing:
 1. Record the source URL, canonical listing URL, and thumbnail image URL when present.
 2. Extract price, date listed, rooms, size, location text, postal code, address, floor, laundry, courtyard, year built, basement/semi-basement indicators, thumbnail image, and notes from the newsletter/listing card if possible.
 3. Search both structured fields and free-text descriptions for key details. Square footage, room count, floor, laundry hookups, courtyard access, postal code, address, and basement/semi-basement wording may appear only in the description.
-4. Follow the detail page only when card-level information is insufficient or suspicious.
+4. Fetch the detail page for every candidate not already rejected by card data, and merge its details over the card data. Follow the external broker sheet link (such as `See detailed sheet`) when the detail page has one, and merge those details too.
 5. Normalize values without inventing missing facts:
    - Date added is the date the listing is added to `docs/index.html`.
    - Postal codes uppercase, preserving full code when available.
@@ -106,7 +108,7 @@ Preferred thumbnail sources, in order:
 
 1. The primary image from the newsletter-generated HTML listing card.
 2. The primary image from a user-provided search-result page listing card.
-3. The first listing photo or `og:image` from the detail page, only if the detail page is already being fetched for other required data.
+3. The first listing photo or `og:image` from the detail page, which is always fetched for candidates headed to either table.
 4. A linked visual fallback only when no source thumbnail is available.
 
 Preserve public source image URLs directly in the HTML. Do not download or rehost listing images unless the user explicitly asks for a separate image-mirroring workflow.
@@ -248,6 +250,7 @@ If the available GitHub tool can only write one file per commit, say so and make
 - Do not bypass bot protection or rate limits.
 - Do not stop the full run when a source is blocked; record it, continue, and report it at the end.
 - Do not run multiple simultaneous requests to the same domain.
-- Do not fetch every detail page when listing cards already prove rejection.
+- Do not fetch detail pages for listings the cards already prove rejected.
+- Do not add or update a table row from card data alone; the detail page (and the linked broker sheet when one exists) must be fetched first.
 - Do not rewrite unrelated HTML during a normal daily update.
 - Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.

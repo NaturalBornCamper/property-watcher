@@ -39,7 +39,7 @@ When updating accepted listings, use `docs/index.html` as the source of truth fo
 
 Use listing websites, public listing pages, and public newsletter/search-alert HTML only as sources for current property data. Do not assume rendered website summaries are complete. Listing cards often omit floor, laundry, courtyard, square footage, postal code, exact address, thumbnail image, or date details.
 
-Prefer the user's newsletter-generated HTML mirror as the default intake source. Use individual listing pages or live search-result pages only when the user provides them directly or when the newsletter HTML is missing details that are needed for filtering.
+Prefer the user's newsletter-generated HTML mirror as the default intake source for discovering candidates. Card data from newsletters and search pages is used to discover candidates and to reject clear failures, never as the final source of a table row: every listing headed for either table gets its detail page fetched (see the detail-page rules under request etiquette).
 
 ## Property intake sources
 
@@ -51,7 +51,7 @@ Supported inputs, in preferred order:
 - Individual listing URLs, as a rare fallback or explicit user-provided exception.
 - Listing-result page URLs, as a rare fallback or explicit user-provided exception.
 
-For newsletter HTML, extract listing URLs, thumbnail image URLs, listing cards, prices, dates, and summary details from the HTML before deciding whether to fetch detail pages.
+For newsletter HTML, extract listing URLs, thumbnail image URLs, listing cards, prices, dates, and summary details from the HTML first. Card data may reject a candidate outright, but any candidate headed for a table row still gets its detail page fetched.
 
 The email-pipe mirror publishes each alert email as a numbered file per sender domain and day (for example `centris-1.html`, `centris-2.html`), because alert sites send one email per saved search. The mirror root serves an auto-generated `index.html` listing the currently published files, and an `archive/` folder holds previous days. When given the mirror root URL, read `index.html` and process every listed file.
 
@@ -86,7 +86,9 @@ Be conservative with requests, but use safe parallelism across different domains
 - Example: one request to `domain-a.com`, one request to `domain-b.com`, and one request to `domain-c.com` may run at the same time; do not run three simultaneous requests to `domain-a.com`.
 - Wait at least 5 seconds between requests to the same domain when using a live browser or HTTP client.
 - Use longer waits, around 10 seconds, when opening many individual detail pages from the same site.
-- Follow detail-page links only when the newsletter HTML, list page, or listing card does not contain enough information to decide eligibility or fill important fields.
+- Always fetch the detail page of every candidate that survives card-level rejection — even when the card already shows postal code, rooms, and price. Cards are only good enough to reject; the detail page is the source for size, floor, laundry, courtyard, year built, exact address, date listed, the free-text description, and any other table field.
+- Skip the detail page only for candidates the card data already rejects outright (wrong postal prefix, real size under 900 sqft, 1 bedroom or fewer, clear below-grade wording).
+- When a detail page links to a fuller external broker sheet (for example Centris's `See detailed sheet` link to the broker's own website), follow that link too and merge its details into the listing's fields — posters often leave most of the information on the broker page instead of the listing itself. Per-domain etiquette applies to the broker's domain like any other, and scheduled runs fetch it through the proxy like any other target page.
 - Build the complete candidate list from all sources first, then deduplicate it (across sources and against `docs/index.html`) before fetching any detail page, so the same listing is never requested twice.
 - If a site returns bot protection, CAPTCHA, 403, 429, unusual blocking behavior, or an access error, record the blocked source and continue with the next source or next domain.
 - Report blocked sources at the end with the URL, domain, observed block type, and what information could not be checked.
@@ -167,10 +169,10 @@ Preferred thumbnail sources, in order:
 
 1. The primary image from the newsletter-generated HTML listing card.
 2. The primary image from a user-provided search-result page listing card.
-3. The first listing photo or `og:image` from the detail page, only if the detail page is already being fetched for other required data.
+3. The first listing photo or `og:image` from the detail page, which is always fetched for candidates headed to either table.
 4. A linked visual fallback only when no source thumbnail is available.
 
-Do not fetch extra detail pages solely to improve a thumbnail when the newsletter HTML already contains enough data to accept or reject the listing.
+Do not fetch a detail page solely to improve a thumbnail for a listing the card data already rejects.
 
 Preserve the source image URL when it is public and stable enough for browser display. Do not download or rehost listing images unless the user explicitly asks for a separate image-mirroring workflow.
 
@@ -316,6 +318,7 @@ Prefer one logical change per commit unless the user asks otherwise.
 - Do not include studios, bachelor apartments, 1-room, or 1-bedroom listings.
 - Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not ignore the free-text description when structured fields are missing.
+- Do not add or update a table row from card data alone; fetch the detail page (and the linked broker sheet when one exists) for every candidate headed to either table. Only card-level rejections skip the detail fetch.
 - Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, construction years, listing dates, added dates, Google Maps links, or thumbnail image URLs.
 - Do not silently change table schemas.
 - Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.
