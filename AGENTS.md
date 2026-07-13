@@ -116,7 +116,7 @@ Extract these fields whenever available. Information may appear in structured li
 11. `LISTING` - main listing thumbnail image linked to the canonical listing URL.
 12. `NOTES` - concise uncertainty notes or source-specific caveats.
 
-Do not fabricate missing fields. Use `Unknown` when a field cannot be found after reasonable inspection.
+Do not fabricate missing fields. Leave the table cell empty when a field cannot be found after reasonable inspection; an empty cell means the information was looked for and not found.
 
 ## Current rental eligibility rules
 
@@ -150,7 +150,7 @@ Size handling:
 - Check both structured fields and the free-text description for square footage.
 - If a plausible size is available and it is less than 900 sqft, reject the listing.
 - If size is missing, keep evaluating the listing; missing size alone is not a rejection.
-- Treat obvious platform defaults such as `1 sqft`, `0 sqft`, or similarly impossible values as `Unknown`, not as real size.
+- Treat obvious platform defaults such as `1 sqft`, `0 sqft`, or similarly impossible values as unknown (empty size cell), not as real size.
 - If a listing says less than 900 sqft in prose or structured data, reject it even if another field is missing.
 
 Basement and demi-sous-sol handling:
@@ -199,7 +199,7 @@ Both tables must include these columns, in this order:
 11. `Listing`
 12. `Notes`
 
-Each listing row in either table must have exactly twelve cells. Use the construction year (for example `1962`) in `Year built`, or `Unknown` when the source does not state it.
+Each listing row in either table must have exactly twelve cells. Use the construction year (for example `1962`) in `Year built`, or leave the cell empty when the source does not state it.
 
 Use short cell values. Escape HTML special characters in user-visible text.
 
@@ -219,15 +219,15 @@ For the location cell, link the visible address/location text to Google Maps whe
 <a href="https://www.google.com/maps/search/?api=1&amp;query=123%20Example%20St%2C%20Montreal%2C%20QC%20H4H%201A1" target="map-123-example-st-h4h-1a1">123 Example St, H4H 1A1</a>
 ```
 
-If no useful location information exists, use `Unknown` as plain text.
+If no useful location information exists, leave the cell empty.
 
-Use `Unknown` for unavailable values.
+Leave the cell empty (`<td></td>`) for unavailable values; do not write `Unknown` or any other placeholder text. An empty cell signals the information was looked for and not found.
 
 ## Unresolved candidates table
 
 Below the accepted table, `docs/index.html` keeps a second table for unresolved candidates: listings that look promising but cannot be fully filtered yet — usually a missing postal code, no clear (closed) bedroom count, or ambiguous basement/semi-basement wording.
 
-- Same twelve columns as the accepted table, with `Unknown` for missing values.
+- Same twelve columns as the accepted table, with empty cells for missing values.
 - `NOTES` must state exactly what is missing or ambiguous, for example `No postal code in listing` or `Bedroom count unclear`.
 - Only plausible candidates belong here. Listings that positively fail a filter (wrong postal prefix, under 900 sqft with a real size, 1 bedroom or fewer, below-grade unit) are rejected, not unresolved.
 - When later information resolves a row, move it to the accepted table preserving its original `Date added`, or remove it if it now fails a filter.
@@ -238,7 +238,7 @@ Below the accepted table, `docs/index.html` keeps a second table for unresolved 
 
 Keep both listings tables sorted by `Date added` newest first, then by `Date listed` newest first.
 
-Within the same `Date added` group, put `Unknown` listing dates below dated listings unless the user explicitly asks for another behavior.
+Within the same `Date added` group, put listings with an empty `Date listed` cell below dated listings unless the user explicitly asks for another behavior.
 
 Build the complete candidate list from all sources (newsletter files and search pages) and deduplicate it before fetching any listing page — the same listing often appears in more than one source. Never fetch the same listing URL twice in a run.
 

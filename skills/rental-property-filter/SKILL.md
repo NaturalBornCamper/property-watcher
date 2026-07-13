@@ -68,10 +68,10 @@ For each candidate listing:
    - Date added is the date the listing is added to `docs/index.html`.
    - Postal codes uppercase, preserving full code when available.
    - Prices as CAD monthly rental prices when source allows.
-   - Size as sqft, or `Unknown` when missing.
-   - Impossible sizes such as `1 sqft`, `0 sqft`, blank, or impossible tiny sizes as `Unknown`.
-   - Dates as `YYYY-MM-DD` when possible, with `Unknown` when not recoverable.
-   - Year built as a 4-digit construction year when the source states one, or `Unknown`.
+   - Size as sqft, or an empty cell when missing.
+   - Impossible sizes such as `1 sqft`, `0 sqft`, blank, or impossible tiny sizes as unknown (empty cell).
+   - Dates as `YYYY-MM-DD` when possible, with an empty cell when not recoverable.
+   - Year built as a 4-digit construction year when the source states one, or an empty cell.
 6. Apply the rental eligibility rules.
 7. Update `docs/index.html` with accepted rows and useful run notes.
 8. Commit the changed file directly unless the user explicitly requested review-only or no-commit behavior.
@@ -88,7 +88,7 @@ Accept a listing only when all these conditions are satisfied:
 
 Do not accept listings with missing postal code unless an exact address or official detail page reliably establishes the postal prefix. When a listing gives an exact street address but no postal code, resolve the postal code from the address with a geocoding lookup (Nominatim search with `addressdetails=1`; see `AGENTS.md`) before treating it as missing, use the result only when it matches the same street number and street, and note `Postal code resolved from address` in `NOTES`.
 
-Do not reject solely for missing size or obvious platform default size. Treat values such as `1 sqft`, `0 sqft`, blank, or impossible tiny sizes as `Unknown`.
+Do not reject solely for missing size or obvious platform default size. Treat values such as `1 sqft`, `0 sqft`, blank, or impossible tiny sizes as unknown (empty size cell).
 
 Reject listings with a plausible size below 900 sqft.
 
@@ -157,7 +157,7 @@ Example row:
 </tr>
 ```
 
-Use `Unknown` for unavailable values.
+Leave the cell empty (`<td></td>`) for unavailable values; do not write `Unknown` or any other placeholder text. An empty cell signals the information was looked for and not found.
 
 Escape HTML special characters in text cells. URL-encode map query parameters. HTML-escape `&` in image and listing URLs as `&amp;`.
 
@@ -167,7 +167,7 @@ For listing links, derive the target from the canonical listing URL or listing I
 
 For Google Maps links, derive the target from the normalized map query, such as `target="map-123-example-st-h4h-1a1"`.
 
-Sort rows by `Date added` newest first, then `Date listed` newest first, before committing updates. Within the same `Date added` group, put `Unknown` listing dates below dated listings.
+Sort rows by `Date added` newest first, then `Date listed` newest first, before committing updates. Within the same `Date added` group, put listings with an empty `Date listed` cell below dated listings.
 
 ## Location and Google Maps link handling
 
@@ -181,7 +181,7 @@ Use the most precise available map query in this order:
 4. Partial postal code plus city/neighborhood.
 5. Neighborhood/borough only if nothing more precise exists.
 
-Do not fabricate missing address or postal-code details. If no useful location data exists, use `Unknown` as plain text.
+Do not fabricate missing address or postal-code details. If no useful location data exists, leave the cell empty.
 
 ## Rejection, unresolved, and blocked summary format
 

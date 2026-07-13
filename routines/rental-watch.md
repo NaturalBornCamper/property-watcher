@@ -99,7 +99,7 @@ For a normal run, commit only `docs/index.html`, with a boring commit message su
 - Deduplicate the complete candidate list from all sources before sending any listing request to the proxy.
 - Fetch the detail page (and the linked external broker sheet when one exists) of every candidate headed to either table; card data alone never fills a row, no matter how complete the card looks. Only candidates the card data already rejects skip the detail fetch.
 - Push to `main` only — never to a session branch, never as a pull request.
-- Never fabricate postal codes, addresses, sizes, prices, dates, or thumbnail URLs; `Unknown` is always acceptable.
+- Never fabricate postal codes, addresses, sizes, prices, dates, or thumbnail URLs; an empty cell is always acceptable.
 - Do not add listings outside `H4H`/`H8P`, with fewer than 2 rooms, under 900 sqft when a plausible size exists, or in a fully or partly below-grade unit to the accepted table; promising-but-unprovable candidates go in the unresolved table instead.
 - One blocked source never stops the run — record it, continue, report it.
 - Do not modify anything in this repository other than `docs/index.html` during a normal run.
