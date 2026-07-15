@@ -20,6 +20,29 @@ If the prompt provides no URLs, stop and report that instead of guessing sources
 
 If either is missing, stop immediately and report it — do not fetch target pages directly and do not improvise endpoints or keys.
 
+## Listing check log
+
+Use `routines/rental-listing-check-log.tsv` as the scheduled routine's persistent detail-check cache. Create it if it does not exist.
+
+The file is a tab-separated log with no header. Append one line per raw candidate listing URL that receives a conclusive decision:
+
+```text
+raw_url<TAB>canonical_id_or_url<TAB>date_checked<TAB>decision<TAB>reason
+```
+
+- `raw_url` is the exact candidate listing URL discovered in a newsletter or search-result source, before canonicalization or tracking cleanup. This is the cache key.
+- `canonical_id_or_url` is the best canonical listing ID or canonical listing URL found during deduplication or detail extraction; use the raw URL if nothing better is known.
+- `date_checked` is the run date in `YYYY-MM-DD`.
+- `decision` is exactly one of `accepted`, `rejected`, or `unresolved`.
+- `unresolved` means the detail page was successfully checked and the listing belongs in the unresolved candidates table because required property facts are missing or ambiguous. It never means blocked, unreachable, CAPTCHA, proxy failure, or any other access failure.
+- `reason` is concise and must not contain tabs or newlines.
+
+Read this file at the start of every run. If the same `raw_url` appears more than once, use the latest line. After building and deduplicating the candidate list, but before fetching any detail page, skip any candidate whose raw URL already has a conclusive `accepted`, `rejected`, or `unresolved` decision in the log. This skip is only a request-saving cache hit; it must not create or update a table row by itself.
+
+Do not cache blocked or unreachable pages as conclusive decisions. Keep reporting those as blocked/unreachable sources instead, and retry them on later runs.
+
+Append new rows only at the end of the run, after the `docs/index.html` update and accepted-row validation have succeeded, and before the git commit. Append rows for candidates conclusively decided during this run, including card-level rejections and post-detail accepted, rejected, or unresolved decisions. Do not append duplicate rows for raw URLs that already have a conclusive log entry.
+
 ## Fetching pages — always through the Proxy Page Server
 
 Never fetch listing sites, search pages, or newsletter files directly (no WebFetch, no curl to the target) — the one exception is the newsletter-mirror index, which is light HTML and may be fetched directly. Every other page fetch is a POST to `$PROXY_PAGE_SERVER_URL`; the proxy fetches the target page and returns its content.
@@ -68,18 +91,23 @@ Request etiquette applies to the **target domain inside the request body**, not 
 ## Procedure
 
 1. Verify both environment variables exist.
-2. Fetch the newsletter-mirror root (directly or through the proxy), then fetch every file it lists through the proxy as markdown and extract the links redirecting to listing pages.
-3. Fetch each search-result page URL from the prompt through the proxy.
-4. Build the complete candidate list before any listing request: extract every candidate from all sources — canonical URL, thumbnail URL, price, rooms, size, location/postal code, dates, floor/laundry/courtyard/year-built hints — into one list. Then deduplicate it: the same listing often appears in both a search page and a newsletter (normalize URLs and compare listing IDs/addresses, not just raw URLs), and drop candidates already present in `docs/index.html` (either table). Never send the same listing to the proxy twice in a run.
-5. Apply the eligibility rules from `AGENTS.md` to each unique candidate using its card data, for rejection only: drop candidates the card already proves ineligible (wrong postal prefix, real size under 900 sqft, 1 bedroom or fewer, clear below-grade wording). Card data alone never accepts a listing or fills a table row.
-6. Fetch the detail page of every surviving candidate through the proxy — even when the card already shows postal code, rooms, and price — and extract every table field from it: size, floor, laundry, courtyard, year built, exact address, postal code, date listed, and anything in the free-text description. If the detail page links to a fuller external broker sheet (for example Centris's `See detailed sheet` link to the broker's own website), fetch that linked page through the proxy as well and merge its details — posters often leave most of the information on the broker page. Per-domain etiquette applies to the broker's domain like any other target domain.
-7. Re-apply the eligibility rules with the merged details. For candidates that would pass every filter except a missing postal code and that have an exact street address, resolve the postal code with the geocoding lookup above before consigning them to the unresolved table.
-8. Update `docs/index.html` per `AGENTS.md`: add accepted rows to the accepted table; add promising candidates that still cannot be fully filtered (missing postal code, no clear closed-bedroom count, ambiguous basement wording) to the unresolved candidates table below it; clarify existing rows; update the visible `Last updated` date; keep both tables sorted by `Date added` newest first, then `Date listed` newest first.
-9. Verify every accepted row against the postal-code, rooms, size, and basement/semi-basement rules, then commit and push to `main`.
+2. Read `routines/rental-listing-check-log.tsv` if it exists and build a lookup keyed by raw URL.
+3. Fetch the newsletter-mirror root (directly or through the proxy), then fetch every file it lists through the proxy as markdown and extract the links redirecting to listing pages.
+4. Fetch each search-result page URL from the prompt through the proxy.
+5. Build the complete candidate list before any listing request: extract every candidate from all sources — raw URL, canonical URL, listing ID when visible, thumbnail URL, price, rooms, size, location/postal code, dates, floor/laundry/courtyard/year-built hints — into one list.
+6. Deduplicate the list: the same listing often appears in both a search page and a newsletter. Normalize URLs and compare listing IDs/addresses, not just raw URLs; drop candidates already present in `docs/index.html` (either table); skip raw URLs already conclusively checked in `routines/rental-listing-check-log.tsv`; and never send the same listing to the proxy twice in a run.
+7. Apply the eligibility rules from `AGENTS.md` to each remaining unique candidate using its card data, for rejection only: drop candidates the card already proves ineligible (wrong postal prefix, real size under 900 sqft, 1 bedroom or fewer, clear below-grade wording). Card data alone never accepts a listing or fills a table row.
+8. Fetch the detail page of every surviving uncached candidate through the proxy — even when the card already shows postal code, rooms, and price — and extract every table field from it: size, floor, laundry, courtyard, year built, exact address, postal code, date listed, and anything in the free-text description. If the detail page links to a fuller external broker sheet (for example Centris's `See detailed sheet` link to the broker's own website), fetch that linked page through the proxy as well and merge its details — posters often leave most of the information on the broker page. Per-domain etiquette applies to the broker's domain like any other target domain.
+9. Re-apply the eligibility rules with the merged details. For candidates that would pass every filter except a missing postal code and that have an exact street address, resolve the postal code with the geocoding lookup above before consigning them to the unresolved table.
+10. Update `docs/index.html` per `AGENTS.md`: add accepted rows to the accepted table; add promising candidates that still cannot be fully filtered (missing postal code, no clear closed-bedroom count, ambiguous basement wording) to the unresolved candidates table below it; clarify existing rows; update the visible `Last updated` date; keep both tables sorted by `Date added` newest first, then `Date listed` newest first.
+11. Verify every accepted row against the postal-code, rooms, size, and basement/semi-basement rules.
+12. Append new conclusive decisions from this run to `routines/rental-listing-check-log.tsv`, then commit and push to `main`.
 
 ## Git
 
-For a normal run, commit only `docs/index.html`, with a boring commit message such as `Add rental listings from daily search`, and push it to the `main` branch on `origin`. GitHub deploys the live website from `main` — a commit that lands anywhere else is not deployed and the run has failed its purpose.
+For a normal run, commit only `docs/index.html` and `routines/rental-listing-check-log.tsv`, with a boring commit message such as `Add rental listings from daily search`, and push it to the `main` branch on `origin`. GitHub deploys the live website from `main` — a commit that lands anywhere else is not deployed and the run has failed its purpose.
+
+Prefer one commit containing both files. If the available GitHub write tool can commit only one file at a time, commit and push `docs/index.html` first, then commit and push `routines/rental-listing-check-log.tsv` only after the index commit succeeds. This keeps the visible output ahead of the routine-state log if GitHub Pages reacts to each commit separately.
 
 - Never create or push to a session branch (for example `claude/...`) and never open a pull request. If the environment started you on another branch, get the change onto `main` (checkout `main` and apply or cherry-pick it) before pushing.
 - If pushing to `main` fails, report the exact error and where the commit currently sits — do not silently fall back to another branch, and never claim the change reached GitHub when it did not.
@@ -89,6 +117,7 @@ For a normal run, commit only `docs/index.html`, with a boring commit message su
 - Accepted listings added or updated (address, price, one-line reason).
 - Rejected listings with one-line reasons when they were close or ambiguous.
 - Unresolved candidates added to the unresolved table: missing postal code, ambiguous or missing closed-bedroom count, ambiguous basement/semi-basement wording.
+- Listing check log rows appended: count and decision breakdown.
 - Blocked or unreachable sources: URL, target domain, what was observed, what could not be checked.
 - Files changed, commit message, and commit SHA (or the exact failure).
 
@@ -96,10 +125,10 @@ For a normal run, commit only `docs/index.html`, with a boring commit message su
 
 - Fetch all target pages through the Proxy Page Server; the only fetches allowed to skip the proxy are the newsletter-mirror index and the Nominatim postal-code geocoding lookup.
 - Make no network requests other than the Proxy Page Server, the newsletter-mirror index, the Nominatim geocoding lookup, and git.
-- Deduplicate the complete candidate list from all sources before sending any listing request to the proxy.
-- Fetch the detail page (and the linked external broker sheet when one exists) of every candidate headed to either table; card data alone never fills a row, no matter how complete the card looks. Only candidates the card data already rejects skip the detail fetch.
+- Deduplicate the complete candidate list from all sources and apply the raw-URL listing check log before sending any listing request to the proxy.
+- Fetch the detail page (and the linked external broker sheet when one exists) of every uncached candidate headed to either table; card data alone never fills a row, no matter how complete the card looks. Only candidates the card data already rejects, or whose raw URL is already conclusively checked in the listing check log, skip the detail fetch.
 - Push to `main` only — never to a session branch, never as a pull request.
 - Never fabricate postal codes, addresses, sizes, prices, dates, or thumbnail URLs; an empty cell is always acceptable.
 - Do not add listings outside `H4H`/`H8P`, with fewer than 2 rooms, under 900 sqft when a plausible size exists, or in a fully or partly below-grade unit to the accepted table; promising-but-unprovable candidates go in the unresolved table instead.
 - One blocked source never stops the run — record it, continue, report it.
-- Do not modify anything in this repository other than `docs/index.html` during a normal run.
+- Do not modify anything in this repository other than `docs/index.html` and `routines/rental-listing-check-log.tsv` during a normal run.

@@ -17,6 +17,8 @@ Primary files:
 - `CLAUDE.md` - Claude-specific entry point that should reference this file instead of duplicating these rules.
 - `skills/rental-property-filter/SKILL.md` - ChatGPT Skill for rental property filtering (ChatGPT/manual runs).
 - `routines/rental-watch.md` - scheduled Claude routine for unattended rental filtering runs; the prompt stored in Claude Routines only points here and supplies the source URLs.
+- `routines/rental-listing-check-log.tsv` - scheduled routine detail-check cache/log, keyed by raw candidate listing URL.
+- `.github/workflows/pages.yml` - GitHub Pages deployment workflow; it publishes `docs/` only when `docs/index.html` changes, plus manual workflow dispatch.
 - `email-pipe/` - cPanel email-pipe scripts that publish search-alert newsletter emails as public HTML mirror pages (see `email-pipe/README.md`).
 
 Future supporting files may include more property-type outputs, skills, scripts, notes, templates, or deployment workflows. Keep this file as the repository-wide source of truth when rules overlap.
@@ -29,6 +31,7 @@ Reasoning:
 
 - ChatGPT can update GitHub repository files directly.
 - GitHub can serve `docs/index.html` through GitHub Pages when Pages is enabled for the `main` branch and `/docs` folder.
+- GitHub Pages deployment is handled by `.github/workflows/pages.yml`; keep it path-filtered to `docs/index.html` so unrelated instruction, skill, README, or routine-log commits do not deploy the site.
 - If the user wants the same file on shared hosting later, add a GitHub Actions workflow that uploads `docs/index.html` to Interserver/cPanel using repository secrets.
 
 Do not store FTP, SFTP, SSH, cPanel, or hosting passwords in this repository. Use GitHub Actions secrets for deployment credentials if shared-hosting upload is added later.
@@ -39,7 +42,7 @@ When updating accepted listings, use `docs/index.html` as the source of truth fo
 
 Use listing websites, public listing pages, and public newsletter/search-alert HTML only as sources for current property data. Do not assume rendered website summaries are complete. Listing cards often omit floor, laundry, courtyard, square footage, postal code, exact address, thumbnail image, or date details.
 
-Prefer the user's newsletter-generated HTML mirror as the default intake source for discovering candidates. Card data from newsletters and search pages is used to discover candidates and to reject clear failures, never as the final source of a table row: every listing headed for either table gets its detail page fetched (see the detail-page rules under request etiquette).
+Prefer the user's newsletter-generated HTML mirror as the default intake source for discovering candidates. Card data from newsletters and search pages is used to discover candidates and to reject clear failures, never as the final source of a table row: every new, uncached listing headed for either table gets its detail page fetched (see the detail-page rules under request etiquette).
 
 ## Property intake sources
 
@@ -51,9 +54,32 @@ Supported inputs, in preferred order:
 - Individual listing URLs, as a rare fallback or explicit user-provided exception.
 - Listing-result page URLs, as a rare fallback or explicit user-provided exception.
 
-For newsletter HTML, extract listing URLs, thumbnail image URLs, listing cards, prices, dates, and summary details from the HTML first. Card data may reject a candidate outright, but any candidate headed for a table row still gets its detail page fetched.
+For newsletter HTML, extract listing URLs, thumbnail image URLs, listing cards, prices, dates, and summary details from the HTML first. Card data may reject a candidate outright, but any new, uncached candidate headed for a table row still gets its detail page fetched.
 
 The email-pipe mirror publishes each alert email as a numbered file per sender domain and day (for example `centris-1.html`, `centris-2.html`), because alert sites send one email per saved search. The mirror root serves an auto-generated `index.html` listing the currently published files, and an `archive/` folder holds previous days. When given the mirror root URL, read `index.html` and process every listed file.
+
+## Scheduled rental check log
+
+Scheduled rental runs use `routines/rental-listing-check-log.tsv` as a small persistent cache so the routine does not re-fetch the same detail pages every run.
+
+The log is tab-separated, has no header, and uses this row shape:
+
+```text
+raw_url<TAB>canonical_id_or_url<TAB>date_checked<TAB>decision<TAB>reason
+```
+
+- `raw_url` is the exact candidate listing URL discovered in a newsletter or search-result source, before canonicalization or tracking cleanup. This is the lookup key.
+- `canonical_id_or_url` is the best canonical listing ID or canonical listing URL known after deduplication or detail extraction; use the raw URL if nothing better is known.
+- `date_checked` is normalized to `YYYY-MM-DD`.
+- `decision` must be one of `accepted`, `rejected`, or `unresolved`.
+- `unresolved` means the detail page was successfully checked and the listing belongs in the unresolved candidates table because required property facts are missing or ambiguous. It never means blocked, unreachable, CAPTCHA, proxy failure, or any other access failure.
+- `reason` is a concise decision reason with no tabs or newlines.
+
+At the start of a scheduled run, read the log and use the latest row for each raw URL. After building and deduplicating the current candidate list, skip detail-page fetches for raw URLs already logged with a conclusive `accepted`, `rejected`, or `unresolved` decision. This cache skip must not create or update a table row by itself.
+
+Do not cache blocked or unreachable sources as conclusive decisions. Report them as blocked/unreachable instead, and retry them on later runs.
+
+After `docs/index.html` has been updated and accepted rows have been validated, append new conclusive decisions from the run to `routines/rental-listing-check-log.tsv` before committing. Append only new raw URLs that do not already have a conclusive row.
 
 ## Proxy Page Server
 
@@ -86,10 +112,10 @@ Be conservative with requests, but use safe parallelism across different domains
 - Example: one request to `domain-a.com`, one request to `domain-b.com`, and one request to `domain-c.com` may run at the same time; do not run three simultaneous requests to `domain-a.com`.
 - Wait at least 5 seconds between requests to the same domain when using a live browser or HTTP client.
 - Use longer waits, around 10 seconds, when opening many individual detail pages from the same site.
-- Always fetch the detail page of every candidate that survives card-level rejection — even when the card already shows postal code, rooms, and price. Cards are only good enough to reject; the detail page is the source for size, floor, laundry, courtyard, year built, exact address, date listed, the free-text description, and any other table field.
-- Skip the detail page only for candidates the card data already rejects outright (wrong postal prefix, real size under 900 sqft, 1 bedroom or fewer, clear below-grade wording).
+- Always fetch the detail page of every new, uncached candidate that survives card-level rejection — even when the card already shows postal code, rooms, and price. Cards are only good enough to reject; the detail page is the source for size, floor, laundry, courtyard, year built, exact address, date listed, the free-text description, and any other table field.
+- Skip the detail page only for candidates the card data already rejects outright (wrong postal prefix, real size under 900 sqft, 1 bedroom or fewer, clear below-grade wording), or for scheduled-run candidates whose raw URL is already conclusively checked in `routines/rental-listing-check-log.tsv`.
 - When a detail page links to a fuller external broker sheet (for example Centris's `See detailed sheet` link to the broker's own website), follow that link too and merge its details into the listing's fields — posters often leave most of the information on the broker page instead of the listing itself. Per-domain etiquette applies to the broker's domain like any other, and scheduled runs fetch it through the proxy like any other target page.
-- Build the complete candidate list from all sources first, then deduplicate it (across sources and against `docs/index.html`) before fetching any detail page, so the same listing is never requested twice.
+- Build the complete candidate list from all sources first, then deduplicate it (across sources, against `docs/index.html`, and for scheduled runs against `routines/rental-listing-check-log.tsv`) before fetching any detail page, so the same listing is never requested twice.
 - If a site returns bot protection, CAPTCHA, 403, 429, unusual blocking behavior, or an access error, record the blocked source and continue with the next source or next domain.
 - Report blocked sources at the end with the URL, domain, observed block type, and what information could not be checked.
 - Do not attempt to bypass bot protection, paywalls, logins, rate limits, IP limits, CAPTCHA, or access controls.
@@ -169,7 +195,7 @@ Preferred thumbnail sources, in order:
 
 1. The primary image from the newsletter-generated HTML listing card.
 2. The primary image from a user-provided search-result page listing card.
-3. The first listing photo or `og:image` from the detail page, which is always fetched for candidates headed to either table.
+3. The first listing photo or `og:image` from the detail page, which is fetched for new, uncached candidates headed to either table.
 4. A linked visual fallback only when no source thumbnail is available.
 
 Do not fetch a detail page solely to improve a thumbnail for a listing the card data already rejects.
@@ -240,7 +266,7 @@ Keep both listings tables sorted by `Date added` newest first, then by `Date lis
 
 Within the same `Date added` group, put listings with an empty `Date listed` cell below dated listings unless the user explicitly asks for another behavior.
 
-Build the complete candidate list from all sources (newsletter files and search pages) and deduplicate it before fetching any listing page — the same listing often appears in more than one source. Never fetch the same listing URL twice in a run.
+Build the complete candidate list from all sources (newsletter files and search pages) and deduplicate it before fetching any listing page — the same listing often appears in more than one source. For scheduled runs, apply `routines/rental-listing-check-log.tsv` after deduplication and before fetching detail pages. Never fetch the same listing URL twice in a run.
 
 Deduplicate before adding rows, checking both the accepted table and the unresolved candidates table. Treat listings as likely duplicates when they share any of these:
 
@@ -270,13 +296,15 @@ Before final output or commit, verify that every accepted row satisfies postal-c
 
 ## Commit behavior
 
-Automatic commits are limited to `docs/index.html`. For normal rental filtering/update runs — especially the scheduled routine — update `docs/index.html` and commit it directly after best-effort validation, without asking for confirmation unless the user explicitly requests review-only or no-commit behavior.
+Automatic commits for normal rental filtering/update runs are limited to `docs/index.html` and, for scheduled runs, `routines/rental-listing-check-log.tsv`. Update `docs/index.html`, append the scheduled check log when applicable, and commit directly after best-effort validation, without asking for confirmation unless the user explicitly requests review-only or no-commit behavior.
 
-Routine commits of `docs/index.html` must be pushed to the `main` branch: GitHub deploys the live website from `main`, so output left on a session branch (for example `claude/...`) or in a pull request is not deployed. Never push routine output anywhere other than `main`.
+Routine commits of `docs/index.html` and `routines/rental-listing-check-log.tsv` must be pushed to the `main` branch: GitHub deploys the live website from `main`, so output left on a session branch (for example `claude/...`) or in a pull request is not deployed. Never push routine output anywhere other than `main`.
 
-For every other file (`AGENTS.md`, `CLAUDE.md`, skills, routines, scripts), do not commit automatically. When instructions or workflow defaults change, update `AGENTS.md` and the affected skill/routine files directly, then present the changes for review with a proposed commit message and let the user commit manually.
+Prefer one commit containing both files. If the available GitHub write tool can commit only one file at a time, commit and push `docs/index.html` first, then commit and push `routines/rental-listing-check-log.tsv` only after the index commit succeeds. This keeps the visible output ahead of the routine-state log if GitHub Pages reacts to each commit separately.
 
-If the available GitHub tool writes one file per commit, make sequential commits and report each commit SHA.
+For every other file (`AGENTS.md`, `CLAUDE.md`, skills, routine instruction files, workflows, scripts), do not commit automatically. When instructions or workflow defaults change, update `AGENTS.md` and the affected skill/routine/workflow files directly, then present the changes for review with a proposed commit message and let the user commit manually.
+
+If the available GitHub tool writes one file per commit, make sequential commits in the order above and report each commit SHA.
 
 ## Review workflow
 
@@ -285,6 +313,7 @@ For filtering tasks, provide:
 - Accepted listings added or updated.
 - Rejected listings with short rejection reasons when they were close or ambiguous.
 - Unresolved candidates that need manual review, especially missing postal code, ambiguous room count, ambiguous basement/semi-basement wording, or missing thumbnail when no source image exists.
+- Scheduled check-log rows appended, with a count and decision breakdown when applicable.
 - Blocked sources that could not be checked because of bot protection, CAPTCHA, HTTP errors, or access restrictions.
 - Files changed.
 - Commit message and commit SHA when committed; otherwise a proposed commit message.
@@ -318,7 +347,7 @@ Prefer one logical change per commit unless the user asks otherwise.
 - Do not include studios, bachelor apartments, 1-room, or 1-bedroom listings.
 - Do not include basement, semi-basement, demi-sous-sol, or otherwise partly below-grade dwelling units.
 - Do not ignore the free-text description when structured fields are missing.
-- Do not add or update a table row from card data alone; fetch the detail page (and the linked broker sheet when one exists) for every candidate headed to either table. Only card-level rejections skip the detail fetch.
+- Do not add or update a table row from card data alone; fetch the detail page (and the linked broker sheet when one exists) for every new, uncached candidate headed to either table. Only card-level rejections and scheduled-run raw-URL check-log hits skip the detail fetch.
 - Do not fabricate postal codes, addresses, square footage, floor, laundry, courtyard, construction years, listing dates, added dates, Google Maps links, or thumbnail image URLs.
 - Do not silently change table schemas.
 - Do not ask for commit approval on normal filtering/update runs unless the user explicitly requests review-only or no-commit behavior.
