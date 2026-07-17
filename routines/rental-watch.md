@@ -22,9 +22,9 @@ If either is missing, stop immediately and report it — do not fetch target pag
 
 ## Listing check log
 
-Use `routines/rental-listing-check-log.tsv` as the scheduled routine's persistent detail-check cache. Create it if it does not exist.
+Use `routines/rental-listing-check-log.tsv` as the scheduled routine's persistent detail-check cache. Create it if it does not exist, starting with the header line.
 
-The file is a tab-separated log with no header. Append one line per raw candidate listing URL that receives a conclusive decision:
+The file is a tab-separated log whose first line is a header naming the columns (`raw_url`, `canonical_id_or_url`, `date_checked`, `decision`, `reason`). Skip the header when reading; never treat it as a candidate row and never append a second one. Append one line per raw candidate listing URL that receives a conclusive decision:
 
 ```text
 raw_url<TAB>canonical_id_or_url<TAB>date_checked<TAB>decision<TAB>reason

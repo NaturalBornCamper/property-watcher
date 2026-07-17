@@ -62,11 +62,13 @@ The email-pipe mirror publishes each alert email as a numbered file per sender d
 
 Scheduled rental runs use `routines/rental-listing-check-log.tsv` as a small persistent cache so the routine does not re-fetch the same detail pages every run.
 
-The log is tab-separated, has no header, and uses this row shape:
+The log is tab-separated. Its first line is a header naming the columns; every line after it is one row with this shape:
 
 ```text
 raw_url<TAB>canonical_id_or_url<TAB>date_checked<TAB>decision<TAB>reason
 ```
+
+Skip the header line when reading the log, and never treat it as a candidate row. When creating the file from scratch, write the header line first. Appends always go after the last line; do not duplicate or rewrite the header.
 
 - `raw_url` is the exact candidate listing URL discovered in a newsletter or search-result source, before canonicalization or tracking cleanup. This is the lookup key.
 - `canonical_id_or_url` is the best canonical listing ID or canonical listing URL known after deduplication or detail extraction; use the raw URL if nothing better is known.
