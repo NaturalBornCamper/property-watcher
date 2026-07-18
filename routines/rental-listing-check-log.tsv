@@ -325,3 +325,27 @@ https://www.facebook.com/marketplace/item/1751108353001578/	facebook:17511083530
 https://www.facebook.com/marketplace/item/2309231952818460/	facebook:2309231952818460	2026-07-17	accepted	Exact address (297 5e Avenue) and Rental Location confirm H8P 1H6, 2 bedrooms, upper duplex, no basement wording
 https://www.facebook.com/marketplace/item/976977048465882/	facebook:976977048465882	2026-07-17	accepted	Exact address (7486 Boulevard Champlain) confirms H8P 1A1, 3 bedrooms, 2nd floor, no basement wording
 https://www.facebook.com/marketplace/item/1438579858266781/	facebook:1438579858266781	2026-07-17	rejected	Detail description explicitly says "situe au niveau sous-sol" (basement level)
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/renovated-verdun-5-1-2-appartment-5-minutes-walk-to-metro/1740736911	kijiji:1740736911	2026-07-18	rejected	Detail page shows 800 sqft, below 900 sqft minimum
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/lasalle:-nice-5-1-2-in-a-5-plex-for-now-or-later/1740712522	kijiji:1740712522	2026-07-18	rejected	655 Ave Lacharite, detail page describes unit as semi-basement in a 5-plex
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/spacious-5-duplex-for-rent-backyard-garage-parking-&-great-l/1740734510	kijiji:1740734510	2026-07-18	rejected	Detail page rental location is H8N 1N5, wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/lasalle-4-1-2-upper/1740752192	kijiji:1740752192	2026-07-18	rejected	Detail page location Parc Angrignon H8N1V7 wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/6-1-2-near-metro-monk-available-august-1st/1740754346	kijiji:1740754346	2026-07-18	rejected	Detail page location Montreal H4E 3J1 wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/grand-beau-logement-a-louer-5-1-2-5-5-mtl-apartment-for-rent/1740771087	kijiji:1740771087	2026-07-18	rejected	Detail page location Lasalle H8R 1S8 wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/nice-apartment-for-rent-4-1-2-mtl-4-5-beau-logement-a-louer/1740771660	kijiji:1740771660	2026-07-18	rejected	Detail page location Lasalle H8R 1S8 wrong postal prefix, same building as 1740771087
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/ville-lasalle-4-5-enhaut-tranquille-aug-ou-sept/1740775350	kijiji:1740775350	2026-07-18	rejected	Detail page location Lasalle H8N 1K4 wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/rent-apartment/1740780712	kijiji:1740780712	2026-07-18	rejected	Detail page location Lasalle H8R wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/verdun-great-location-very-nice-4-plus/1740758369	kijiji:1740758369	2026-07-18	rejected	Detail page shows 800 sqft, below 900 sqft minimum
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/bright-4-perfect-location/1740760207	kijiji:1740760207	2026-07-18	rejected	Detail page shows 800 sqft, below 900 sqft minimum
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/4-1-2-a-louer-a-montreal-sur-la-rue-jacques-hertel/1740772680	kijiji:1740772680	2026-07-18	rejected	Card-level reject: postal H4E 1S6 shown on card
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/verdun-proche-de-tout-2cac-h4g2w2/1740773907	kijiji:1740773907	2026-07-18	rejected	Card-level reject: postal H4G2W2 shown in title
+https://www.facebook.com/marketplace/item/1274336211295732/	facebook:1006550041970600	2026-07-18	accepted	Duplicate of existing accepted 220 Boulevard Bishop-Power H8P 2P8 row (same postal, elevator, laundry in building, balcony, 2BR)
+https://www.facebook.com/marketplace/item/1345635301041500/	facebook:1345635301041500	2026-07-18	rejected	Description confirms 1 chambre fermee (1 bedroom) despite 2 beds structured field
+https://www.facebook.com/marketplace/item/3788965787911722/	facebook:3788965787911722	2026-07-18	unresolved	No postal code or exact address disclosed; 2BR, 1st floor, promising
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-lasalle/12704378	centris:12704378	2026-07-18	accepted	Duplicate of existing accepted row in docs
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-lasalle/19209136	centris:19209136	2026-07-18	accepted	Duplicate of existing accepted row in docs
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-lasalle/27575797	centris:27575797	2026-07-18	accepted	Duplicate of existing accepted row in docs
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-verdun-ile-des-soeurs/13666722	centris:13666722	2026-07-18	accepted	Duplicate of existing accepted row in docs
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-verdun-ile-des-soeurs/14134360	centris:14134360	2026-07-18	accepted	Duplicate of existing accepted row in docs
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-verdun-ile-des-soeurs/16610539	centris:16610539	2026-07-18	accepted	Duplicate of existing accepted row in docs
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-verdun-ile-des-soeurs/25178784	centris:25178784	2026-07-18	accepted	Duplicate of existing accepted row in docs
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-verdun-ile-des-soeurs/25994279	centris:25994279	2026-07-18	accepted	Duplicate of existing accepted row in docs
