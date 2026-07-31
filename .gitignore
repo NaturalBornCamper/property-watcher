@@ -7,3 +7,4 @@ email-pipe/pipe.log.old
 email-pipe/failed/*
 !email-pipe/failed/.gitkeep
 email-pipe/archive/
+/tmp

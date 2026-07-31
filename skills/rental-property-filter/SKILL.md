@@ -202,6 +202,16 @@ For a normal update, preserve the file as-is except for the specific change. Onl
 4. Update the visible `Last updated` date.
 5. Re-sort both tables.
 6. Update the blocked/unresolved notes section when useful.
+7. Prune the run-notes section to its five most recent entries (see below).
+8. Drop rows in either table whose `Date added` is a calendar month or older (see below).
+
+**Run notes: keep five, at most.** The `Run notes` section keeps only the five newest run entries, newest first. When a run adds an entry, delete the oldest entries until five remain, including any `<ul>` detail list that belongs to a deleted entry. The full history stays available in git; the page shows only recent runs. This pruning is expected on every run and is not "opportunistic cleanup".
+
+**Listings: drop rows a month or older.** Remove every row from **both** tables whose `Date added` is one calendar month or more before the run date — on a 2026-07-31 run, every row dated 2026-06-30 or earlier. Measure in calendar months, not 30 days: a row added 2026-07-01 survives that run and goes on the 2026-08-01 run. A rental that has been on the watch list a month has almost certainly been taken, and git keeps the history either way.
+
+- Apply this to the accepted table and the unresolved table alike, and re-instate the unresolved placeholder row if pruning empties that table.
+- Do not touch the check log when pruning. A pruned listing does not reappear: its raw URL still holds a conclusive decision there, so later runs skip it as a cache hit.
+- This pruning, too, is expected on every run rather than opportunistic cleanup.
 
 Do not rewrite unrelated rows, change the schema, or do opportunistic cleanup unless the user asks. Before output or commit, verify every accepted row passes every supplied filter (postal-code prefix, bedrooms, size, price, below-grade — each only if its parameter was given), and that its `Listing` cell holds a linked thumbnail or linked fallback.
 
@@ -209,8 +219,11 @@ Do not rewrite unrelated rows, change the schema, or do opportunistic cleanup un
 
 ## Review / report format
 
+**The report is the run's own reply — the message the agent returns to the user (the run output the scheduling platform shows for a scheduled run), written in Markdown.** It is never a file. Do not write any part of it to `docs/index.html`, to the check log, to a scratch or `tmp/` file, or to a new file of any kind; per "Files this skill maintains" above, a run writes only `docs/index.html` and, in scheduled runs, `routines/rental-listing-check-log.tsv`. The notes section inside `docs/index.html` is a separate thing with its own rules, and the coverage table does not belong there.
+
 Provide:
 
+- The per-source coverage table below, whenever the run scanned more than one source.
 - Accepted listings added or updated (address, price, one-line reason).
 - Rejected listings with short reasons when they were close or ambiguous.
 - Unresolved candidates needing manual review, stating what is missing.
@@ -218,6 +231,28 @@ Provide:
 - Files changed, and the commit message and SHA when committed (or a proposed message when review-only).
 
 Do not claim a file was committed unless a git write action actually succeeded.
+
+### Per-source coverage table
+
+Report coverage as a **Markdown table in the reply**, not prose and not a file — one row per source, in the order the sources were given, with each newsletter file counted as its own source. This is how the run proves every result on every page was read, so a source that produced nothing or was blocked still gets a row; never drop one.
+
+| Source | Rendered | Stated total | Fetched | Card-rejected | Skipped | Blocked | Added |
+|---|---|---|---|---|---|---|---|
+| Newsletter: kijiji-1.html | 8 | — | 3 | 4 | 1 | 0 | 1 |
+| Centris LaSalle | 20 | 120 | 2 | 12 | 6 | 0 | 0 |
+| Kijiji Verdun | 41 unique | 132 | 5 | 6 | 30 | 0 | 2 (1 unresolved) |
+| Apartments.com | 0 | — | 0 | 0 | 0 | all | 0 |
+
+- `Source` — a short stable label: site plus area for a search URL (`Centris LaSalle`), `Newsletter: <file>` for a mirror file. Use the same label every run so runs can be compared.
+- `Rendered` — listing cards the page actually presented as read this run, after collapsing repeats within that same page (write `41 unique` when it differs from the raw card count).
+- `Stated total` — the result count the site claims for that search, or `—` when it states none. When `Rendered` is lower, the page paginated or truncated: page through everything reachable, and flag the remainder under the table.
+- `Fetched` — detail pages fetched this run for that source's candidates.
+- `Card-rejected` — rejected from card data alone, with no detail fetch.
+- `Skipped` — already decided elsewhere: check-log cache hits, candidates already holding a row in `docs/index.html`, and duplicates of a candidate counted under an earlier source.
+- `Blocked` — candidates that could not be checked because the source page or their detail page was blocked or unreachable. For a wholly blocked source write `all`, and give the URL, domain, and observed block type in the blocked-sources list.
+- `Added` — rows this source contributed to `docs/index.html` this run, splitting the kinds when both occurred (`2 (1 unresolved)`).
+
+Every row must reconcile: `Rendered = Fetched + Card-rejected + Skipped + Blocked`. A row that does not reconcile means candidates went unaccounted for — find them, or say under the table why the row is short.
 
 ---
 
@@ -279,7 +314,9 @@ Write proxy response headers and bodies to a temp directory outside the reposito
 
 ### End every scheduled run with a summary
 
-- **Per-source coverage** — for every source (each search-result page and each newsletter file), report how many listings it presented and, of those, how many were newly fetched, rejected from card data, blocked/unreachable, or skipped because the check log already had them. The counts must reconcile (listings presented = fetched + card-rejected + blocked + cache-skipped), which is how the run proves every result on every page was read. If a search page paginates, page through all pages and count them all; flag any page whose count looks truncated.
+Write it as the run's final reply, the run output the scheduling platform reports back — not into a file (see "Review / report format" above).
+
+- **Per-source coverage table** — mandatory in scheduled runs, in the table format defined under "Review / report format" above, with one row for every source the routine supplied: each `search_urls` entry and each file listed by the newsletter mirror, blocked ones included. Prose instead of the table is not acceptable here.
 - Accepted listings added or updated (address, price, one-line reason).
 - Rejected listings with one-line reasons when close or ambiguous.
 - Unresolved candidates added, with what is missing.
