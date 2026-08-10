@@ -972,3 +972,24 @@ https://www.logisquebec.com/appartement-a-louer-verdun-l356803	logisquebec:l3568
 https://www.facebook.com/marketplace/item/1016156651295708/	facebook:1016156651295708	2026-08-09	rejected	Detail page confirms H8P 2N8 but 730 sqft, below 900 sqft minimum
 https://www.facebook.com/marketplace/item/2215184942666816/	facebook:2215184942666816	2026-08-09	accepted	2e Avenue, LaSalle H8P 2G5, $1,800/mo, 1,300 sqft, 2nd floor duplex; matches existing accepted row (Facebook item 2290714078423657) in every detail, duplicate not a new row
 https://www.facebook.com/marketplace/item/2507145406426122/	facebook:2507145406426122	2026-08-09	unresolved	Grand 5 1/2 haut de triplex, LaSalle; no exact address or postal code disclosed (location approximate); new unresolved row
+https://duproprio.com/en/1139506	duproprio:1139506	2026-08-10	rejected	Exact address geocoded to H8N 2J5, wrong postal prefix (7980 Rue Fontaine LaSalle)
+https://duproprio.com/en/1035289	duproprio:1035289	2026-08-10	accepted	Exact address geocoded to H8P 2N9 (639 11e avenue LaSalle); duplicate of existing accepted row in docs
+https://duproprio.com/en/1139505	duproprio:1139505	2026-08-10	rejected	Detail page confirms 775 sqft under 900 sqft (844 rue Osborne Verdun)
+https://www.centris.ca/en/condos-apartments~for-rent~montreal-verdun-ile-des-soeurs/24736928	centris:24736928	2026-08-10	rejected	Exact address geocoded to H4G 2Z1 wrong postal prefix (94 6e Avenue Verdun)
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/4-1-2-apartments-for-rent-in-lasalle/1741818548	kijiji:1741818548	2026-08-10	rejected	Card-level reject: 750 sqft on card
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/4-1-2-freshly-painted-near-newman-shopping-mall/1741803997	kijiji:1741803997	2026-08-10	rejected	Card-level reject: 635 sqft on card
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/cession-de-bail-4-1-2-1er-septembre-1695/1741797782	kijiji:1741797782	2026-08-10	rejected	Card-level reject: 850 sqft on card
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/wow-condo-renove-2-cac-et-2-balcons/1741793746	kijiji:1741793746	2026-08-10	rejected	Card discloses Montreal H4E 1P3, wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/4-1-2-lasalle-peinture-grand-tranquille/1741786222	kijiji:1741786222	2026-08-10	rejected	Card-level reject: 880 sqft on card
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/4-1-2-lasalle-bord-de-leau/1741818756	kijiji:1741818756	2026-08-10	accepted	Detail page confirms H8P 2E1, 950 sqft, no below-grade wording; duplicate repost of existing Pointe McDonald H8P 2E1 "Grand 4 1/2 NEUF" row
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/ville-lasalle-4-5-beau-grand/1741818514	kijiji:1741818514	2026-08-10	rejected	Detail page rental location is H8N 1K4 wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/beautifully-renovated-4-apartments-available-immediately/1741810242	kijiji:1741810242	2026-08-10	rejected	Detail page rental location is H4E 4L7 wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/4-1-2-a-louer-for-rent-avec-rangement-with-storage/1741780365	kijiji:1741780365	2026-08-10	rejected	Detail page address 6665 Rue Dumas H4E 3A1 wrong postal prefix
+https://www.kijiji.ca/v-short-term-rental/ville-de-montreal/4-1-2-lasalle-10th-august/1741801858	kijiji:1741801858	2026-08-10	rejected	Detail page rental location is H8R 3J8 wrong postal prefix
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/5-1-2-renove-3-chambres-pres-metro-angrignon-electros-incl/1741785257	kijiji:1741785257	2026-08-10	rejected	Detail page postal prefix H4E is outside H4H/H8P
+https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/61-2-near-metro-monk-available-september-1st/1741784093	kijiji:1741784093	2026-08-10	rejected	Detail page rental location is H4E 3J1 wrong postal prefix
+https://www.apartments.com/689-rue-woodland-verdun-qc/l6gp4rg/	apartments:l6gp4rg	2026-08-10	accepted	689 Rue Woodland H4H 1V7; qualifying "5 1/2 + den" floor plan 1,000-1,100 sqft $2,100/mo meets minimum; new accepted row
+https://www.logisquebec.com/appartement-a-louer-lasalle-l356891	logisquebec:l356891	2026-08-10	accepted	140 Avenue Alepin LaSalle, postal resolved from address via Nominatim to H8P 1S2, 950 sqft, no below-grade wording; new accepted row
+https://www.facebook.com/marketplace/item/1876981666597532/	facebook:1876981666597532	2026-08-10	unresolved	Detail page checked but no exact address, postal code, or size disclosed
+https://www.facebook.com/marketplace/item/1549553033533284/	facebook:1549553033533284	2026-08-10	unresolved	Detail page checked but no exact address, postal code, or size disclosed
+https://www.facebook.com/marketplace/item/4426742617642991/	facebook:4426742617642991	2026-08-10	unresolved	Detail page confirms H8P 2H2 but no square footage disclosed
