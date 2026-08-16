@@ -1158,3 +1158,5 @@ https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/5-1-2-a-louer-2e-eta
 https://www.kijiji.ca/v-apartments-condos/ville-de-montreal/ville-lasalle-4-5-enhaut-tranquille/1742102649	kijiji:1742102649	2026-08-16	rejected	Detail page confirms Lasalle H8N 1K4 (Angrignon), wrong postal prefix; matches recurring "Ville lasalle 4.5 enhaut" pattern
 https://www.facebook.com/marketplace/item/1075837504808101/	facebook:1075837504808101	2026-08-16	unresolved	No exact address/postal code disclosed (Rental Location only "Montreal, QC"); new unresolved row
 https://www.facebook.com/marketplace/item/1274264905771672/	kijiji:1741498088	2026-08-16	accepted	Duplicate of existing accepted Pointe McDonald H8P 2E1 "Grand 4 1/2 NEUF" row
+https://www.zumper.com/address/4007-ave-coloniale-montreal-qc-h2w-2b9-can	zumper:/address/4007-ave-coloniale-montreal-qc-h2w-2b9-can	2026-08-16	rejected	Card-level reject: H2W 2B9 on card, wrong postal prefix
+https://www.zumper.com/address/485-4e-ave-montreal-qc-h4g-2y3-can	zumper:/address/485-4e-ave-montreal-qc-h4g-2y3-can	2026-08-16	rejected	Card-level reject: H4G 2Y3 on card, wrong postal prefix
